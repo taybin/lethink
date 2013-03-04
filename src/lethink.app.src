@@ -1,0 +1,12 @@
+{application, lethink,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { lethink_app, []}},
+  {env, []}
+ ]}.
