@@ -19,14 +19,15 @@ test: eunit ct
 clean:
 	@$(REBAR) clean
 
-APPS = kernel stdlib sasl erts tools inets eunit
-COMBO_PLT = .$(REPO)_combo_dialyzer_plt
+APPS = kernel stdlib sasl erts ssl tools os_mon runtime_tools crypto inets \
+	   xmerl webtool snmp public_key mnesia eunit syntax_tools compiler
+COMBO_PLT = .$(REPO)_combo_dialyzer.plt
 
 check_plt: compile
-	dialyzer --check_plt --plt $(COMBO_PLT) --apps $(APPS) ebin
+	dialyzer --check_plt --plt $(COMBO_PLT) --apps $(APPS) deps ebin
 
 build_plt: compile
-	dialyzer --build_plt --output_plt $(COMBO_PLT) --apps $(APPS) ebin
+	dialyzer --build_plt --output_plt $(COMBO_PLT) --apps $(APPS) deps ebin
 
 dialyzer: compile
 	dialyzer -Wno_return --plt $(COMBO_PLT) ebin

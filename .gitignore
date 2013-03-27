@@ -1,2 +1,3 @@
+*.plt
 deps
 ebin
