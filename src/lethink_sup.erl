@@ -24,5 +24,10 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-    {ok, { {one_for_one, 5, 10}, []} }.
-
+    lethink_server = ets:new(lethink_server, [
+            ordered_set, public, named_table, {read_concurrency, true}]),
+    Procs = [
+        {lethink_server, {lethink_server, start_link, []},
+            permanent, 5000, worker, [lethink_server]}
+    ],
+    {ok, {{one_for_one, 10, 10}, Procs}}.
