@@ -8,7 +8,7 @@
 
 -include("ql2_pb.hrl").
 
--spec db_create(string()) -> #query{}.
+-spec db_create(binary()) -> #query{}.
 db_create(Name) ->
     #query{
         type = 'START',
@@ -25,7 +25,7 @@ db_create(Name) ->
         token = lethink_token:get()
     }.
 
--spec db_drop(string()) -> #query{}.
+-spec db_drop(binary()) -> #query{}.
 db_drop(Name) ->
     #query{
         type = 'START',

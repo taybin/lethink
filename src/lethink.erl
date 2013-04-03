@@ -3,7 +3,8 @@
 -export([
         start/0,
         stop/0,
-        add_pool/5,
+        add_pool/2,
+        add_pool/3,
         remove_pool/1,
         use/2,
         db_create/2,
@@ -25,19 +26,19 @@ stop() ->
     ok.
 
 %% @doc Start a pool of connections to a database.
--spec add_pool(any(),
-               inet:ip_address() | inet:hostname(),
-               inet:port_number(),
-               pos_integer(),
-               lethink_worker:opts()) -> ok.
-add_pool(Ref, Address, Port, NWorkers, Opts) when NWorkers > 0 ->
+-spec add_pool(any(), pos_integer()) -> ok.
+add_pool(Ref, NWorkers) when NWorkers > 0 ->
+    add_pool(Ref, NWorkers, []).
+
+-spec add_pool(any(), pos_integer(), [lethink_worker:opts()]) -> ok.
+add_pool(Ref, NWorkers, Opts) when NWorkers > 0 ->
     ok = lethink_server:add_pool(Ref),
     {ok, SupPid} = supervisor:start_child(lethink_sup,
         {{lethink_workers_sup, Ref}, {lethink_workers_sup, start_link, []},
             permanent, 5000, supervisor, [lethink_workers_sup]}),
     _ = [begin
                 {ok, _} = supervisor:start_child(
-                    SupPid, [Ref, Address, Port, Opts])
+                    SupPid, [Ref, Opts])
         end || _ <- lists:seq(1, NWorkers)],
     ok.
 
@@ -51,39 +52,39 @@ remove_pool(Ref) ->
             {error, Reason}
     end.
 
--spec use(any(), string()) -> ok.
+-spec use(any(), binary()) -> ok.
 use(Ref, Db) ->
     WorkerPids = lethink_server:get_all_workers(Ref),
     lists:foreach(fun(Pid) ->
                 lethink_worker:use(Pid, Db)
         end, WorkerPids).
 
--spec db_create(any(), string()) -> ok.
+-spec db_create(any(), binary()) -> {ok, binary()} | lethink_worker:res_error().
 db_create(Ref, Db) ->
     WorkerPid = lethink_server:get_worker(Ref),
     lethink_worker:db_create(WorkerPid, Db).
 
--spec db_drop(any(), string()) -> ok.
+-spec db_drop(any(), binary()) -> {ok, binary()} | lethink_worker:res_error().
 db_drop(Ref, Db) ->
     WorkerPid = lethink_server:get_worker(Ref),
     lethink_worker:db_drop(WorkerPid, Db).
 
--spec db_list(any()) -> [string()].
+-spec db_list(any()) -> [binary()].
 db_list(Ref) ->
     WorkerPid = lethink_server:get_worker(Ref),
     lethink_worker:db_list(WorkerPid).
 
-%% -spec table_create(any(), string()) -> ok.
+%% -spec table_create(any(), binary()) -> ok.
 %% table_create(Ref, Table) ->
 %%     WorkerPid = lethink_server:get_worker(Ref),
 %%     lethink_worker:table_create(WorkerPid, Table).
 %%
-%% -spec table_drop(any(), string()) -> ok.
+%% -spec table_drop(any(), binary()) -> ok.
 %% table_drop(Ref, Table) ->
 %%     WorkerPid = lethink_server:get_worker(Ref),
 %%     lethink_worker:table_drop(WorkerPid, Table).
 %%
-%% -spec table_list(any()) -> ok.
+%% -spec table_list(any()) -> [binary()].
 %% table_list(Ref) ->
 %%     WorkerPid = lethink_server:get_worker(Ref),
 %%     lethink_worker:table_list(WorkerPid).

@@ -1,6 +1,6 @@
 -module(lethink_worker).
 
--export([start_link/4,
+-export([start_link/2,
          db_create/2,
          db_drop/2,
          use/2,
@@ -11,64 +11,81 @@
 
 -include("ql2_pb.hrl").
 
--type opts() :: [none | {database, string()}].
+-type opts() :: {address, inet:ip_address() | inet:hostname()} |
+                {port, inet:port_number()} |
+                {database, string()}.
 -type res_success() :: {ok, [#datum{}]}.
--type res_error() :: {error, [#datum{}], [#backtrace{}]}.
+-type res_error() :: {error, #response{}}.
 
--export_type([opts/0]).
+-export_type([opts/0, res_error/0]).
 
 -record(state, {
     socket :: port(),
-    database = undefined :: undefined | string()
+    database :: binary()
 }).
 
 -define(RETHINKDB_VERSION, 16#3f61ba36). % magic number from ql2.proto
 
--spec start_link(any(), string(), pos_integer(), opts()) -> any().
-start_link(Ref, Host, Port, Opts) ->
-    {ok, Pid} = gen_server:start_link(?MODULE, [Host, Port, Opts], []),
+-spec start_link(any(), [opts()]) -> any().
+start_link(Ref, Opts) ->
+    {ok, Pid} = gen_server:start_link(?MODULE, [Opts], []),
     lethink_server:add_worker(Ref, Pid),
     {ok, Pid}.
 
--spec db_create(pid(), string()) -> ok.
+-spec db_create(pid(), binary()) -> {ok, binary()} | res_error().
 db_create(Pid, Name) ->
     gen_server:call(Pid, {db_create, Name}).
 
--spec db_drop(pid(), string()) -> ok.
+-spec db_drop(pid(), binary()) -> {ok, binary()} | res_error().
 db_drop(Pid, Name) ->
     gen_server:call(Pid, {db_drop, Name}).
 
--spec db_list(pid()) -> [string()].
+-spec db_list(pid()) -> [binary()] | res_error().
 db_list(Pid) ->
     gen_server:call(Pid, {db_list}).
 
--spec use(pid(), string()) -> ok.
+-spec use(pid(), binary()) -> ok.
 use(Pid, Name) ->
     gen_server:cast(Pid, {use, Name}).
 
-init([Host, Port, Opts]) ->
+init([Opts]) ->
+    Host = proplists:get_value(address, Opts, {127,0,0,1}),
+    Port = proplists:get_value(port, Opts, 28015),
+    Database = proplists:get_value(database, Opts, <<"test">>),
     {ok, Sock} = gen_tcp:connect(Host, Port, [binary, {packet, 0}, {active, false}]),
     ok = gen_tcp:send(Sock, binary:encode_unsigned(?RETHINKDB_VERSION, little)),
     State = #state{
             socket = Sock,
-            database = proplists:get_value(database, Opts)
+            database = Database
     },
     {ok, State}.
 
 handle_call({db_create, Name}, _From, State) ->
     Query = ql2_wrapper:db_create(Name),
-    Response = send_and_recv(Query, State#state.socket),
+    Response = case send_and_recv(Query, State#state.socket) of
+        {ok, [Datum]} ->
+            [Pair] = Datum#datum.r_object,
+            {ok, list_to_binary(Pair#datum_assocpair.key)};
+        Res ->
+            Res
+    end,
     {reply, Response, State};
 
 handle_call({db_drop, Name}, _From, State) ->
     Query = ql2_wrapper:db_drop(Name),
-    Response = send_and_recv(Query, State#state.socket),
+    Response = case send_and_recv(Query, State#state.socket) of
+        {ok, [Datum]} ->
+            [Pair] = Datum#datum.r_object,
+            {ok, list_to_binary(Pair#datum_assocpair.key)};
+        Res ->
+            Res
+    end,
     {reply, Response, State};
 
 handle_call({db_list}, _From, State) ->
     Query = ql2_wrapper:db_list(),
     {ok, [Response]} = send_and_recv(Query, State#state.socket),
-    List = [Datum#datum.r_str || Datum <- Response#datum.r_array],
+    List = [list_to_binary(Datum#datum.r_str) || Datum <- Response#datum.r_array],
     {reply, List, State};
 
 handle_call(_Message, _From, State) ->
@@ -119,8 +136,8 @@ handle_response(#response{ type = 'SUCCESS_PARTIAL'} = Response) ->
     {ok, Response#response.response};
 
 handle_response(#response{ type = 'CLIENT_ERROR'} = Response) ->
-    {error, Response#response.response, Response#response.backtrace};
+    {error, Response};
 handle_response(#response{ type = 'COMPILE_ERROR'} = Response) ->
-    {error, Response#response.response, Response#response.backtrace};
+    {error, Response};
 handle_response(#response{ type = 'RUNTIME_ERROR'} = Response) ->
-    {error, Response#response.response, Response#response.backtrace}.
+    {error, Response}.
