@@ -1,15 +1,15 @@
 -module(ql2_wrapper).
 
 -export([
-    db_create/2,
-    db_drop/2,
-    db_list/1
+    db_create/1,
+    db_drop/1,
+    db_list/0
 ]).
 
 -include("ql2_pb.hrl").
 
--spec db_create(string(), pos_integer()) -> #query{}.
-db_create(Name, Token) ->
+-spec db_create(string()) -> #query{}.
+db_create(Name) ->
     #query{
         type = 'START',
         query = #term{
@@ -22,11 +22,11 @@ db_create(Name, Token) ->
                 }
             }
         },
-        token = Token
+        token = lethink_token:get()
     }.
 
--spec db_drop(string(), pos_integer()) -> #query{}.
-db_drop(Name, Token) ->
+-spec db_drop(string()) -> #query{}.
+db_drop(Name) ->
     #query{
         type = 'START',
         query = #term{
@@ -39,15 +39,15 @@ db_drop(Name, Token) ->
                 }
             }
         },
-        token = Token
+        token = lethink_token:get()
     }.
 
--spec db_list(pos_integer()) -> #query{}.
-db_list(Token) ->
+-spec db_list() -> #query{}.
+db_list() ->
     #query{
         type = 'START',
         query = #term{
             type = 'DB_LIST'
         },
-        token = Token
+        token = lethink_token:get()
     }.

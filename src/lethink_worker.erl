@@ -19,7 +19,6 @@
 
 -record(state, {
     socket :: port(),
-    token :: pos_integer(),
     database = undefined :: undefined | string()
 }).
 
@@ -52,26 +51,25 @@ init([Host, Port, Opts]) ->
     ok = gen_tcp:send(Sock, binary:encode_unsigned(?RETHINKDB_VERSION, little)),
     State = #state{
             socket = Sock,
-            token = 1,
             database = proplists:get_value(database, Opts)
     },
     {ok, State}.
 
 handle_call({db_create, Name}, _From, State) ->
-    Query = ql2_wrapper:db_create(Name, State#state.token),
+    Query = ql2_wrapper:db_create(Name),
     Response = send_and_recv(Query, State#state.socket),
-    {reply, Response, State#state{ token = State#state.token + 1 }};
+    {reply, Response, State};
 
 handle_call({db_drop, Name}, _From, State) ->
-    Query = ql2_wrapper:db_drop(Name, State#state.token),
+    Query = ql2_wrapper:db_drop(Name),
     Response = send_and_recv(Query, State#state.socket),
-    {reply, Response, State#state{ token = State#state.token + 1 }};
+    {reply, Response, State};
 
 handle_call({db_list}, _From, State) ->
-    Query = ql2_wrapper:db_list(State#state.token),
+    Query = ql2_wrapper:db_list(),
     {ok, [Response]} = send_and_recv(Query, State#state.socket),
     List = [Datum#datum.r_str || Datum <- Response#datum.r_array],
-    {reply, List, State#state{ token = State#state.token + 1 }};
+    {reply, List, State};
 
 handle_call(_Message, _From, State) ->
     {reply, ok, State}.
