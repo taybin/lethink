@@ -1,3 +1,5 @@
 *.plt
 deps
 ebin
+doc
+.eunit

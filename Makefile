@@ -1,6 +1,15 @@
+PROJECT=lethink
 REBAR=`which rebar || printf ./rebar`
-REPO=lethink
+
+# Main
+
 all: get-deps compile
+
+clean:
+	@$(REBAR) clean
+
+distclean: clean-docs
+	rm -fr deps/
 
 get-deps:
 	@$(REBAR) get-deps
@@ -8,20 +17,36 @@ get-deps:
 compile:
 	@$(REBAR) compile
 
-ct:
-	@$(REBAR) skip_deps=true ct
+# Docs
+
+docs: clean-docs
+	@$(REBAR) doc skip_deps=true
+
+clean-docs:
+	rm -f doc/*.css
+	rm -f doc/*.html
+	rm -f doc/*.png
+	rm -f doc/edoc-info
+
+# Tests.
+
+deps/proper:
+	@$(REBAR) -C rebar.tests.config get-deps
+	cd deps/proper && $(REBAR) compile
+
+tests: clean deps/proper all eunit ct
 
 eunit:
-	@$(REBAR) skip_deps=true eunit
+	@$(REBAR) -C rebar.tests.config eunit skip_deps=true
 
-test: eunit ct
+ct:
+	@$(REBAR) -C rebar.tests.config ct skip_deps=true suites=
 
-clean:
-	@$(REBAR) clean
+# Dialyzer
 
 APPS = kernel stdlib sasl erts ssl tools os_mon runtime_tools crypto inets \
 	   xmerl webtool snmp public_key mnesia eunit syntax_tools compiler
-COMBO_PLT = .$(REPO)_combo_dialyzer.plt
+COMBO_PLT = .$(PROJECT).plt
 
 check_plt: compile
 	dialyzer --check_plt --plt $(COMBO_PLT) --apps $(APPS) deps ebin
