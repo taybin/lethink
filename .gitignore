@@ -3,3 +3,4 @@ deps
 ebin
 doc
 .eunit
+include
