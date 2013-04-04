@@ -1,3 +1,4 @@
+%% @private
 -module(ql2_wrapper).
 
 -export([

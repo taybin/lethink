@@ -1,3 +1,4 @@
+%% @private
 -module(lethink_worker).
 
 -export([start_link/2,
@@ -13,7 +14,7 @@
 
 -type opts() :: {address, inet:ip_address() | inet:hostname()} |
                 {port, inet:port_number()} |
-                {database, string()}.
+                {database, binary()}.
 -type res_success() :: {ok, [#datum{}]}.
 -type res_error() :: {error, #response{}}.
 

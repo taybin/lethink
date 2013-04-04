@@ -1,3 +1,4 @@
+%% @private
 -module(lethink_token).
 
 -export([start/0,

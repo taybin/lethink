@@ -1,4 +1,4 @@
-
+%% @private
 -module(lethink_sup).
 
 -behaviour(supervisor).

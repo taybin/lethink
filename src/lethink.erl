@@ -25,11 +25,12 @@ stop() ->
     application:stop(lethink),
     ok.
 
-%% @doc Start a pool of connections to a database.
+%% @equiv add_pool(any(), pos_integer(), [{address, "localhost"}, {port, 28015}, {database, <<"test">>}])
 -spec add_pool(any(), pos_integer()) -> ok.
 add_pool(Ref, NWorkers) when NWorkers > 0 ->
     add_pool(Ref, NWorkers, []).
 
+%% @doc Start a pool of connections to a database.
 -spec add_pool(any(), pos_integer(), [lethink_worker:opts()]) -> ok.
 add_pool(Ref, NWorkers, Opts) when NWorkers > 0 ->
     ok = lethink_server:add_pool(Ref),

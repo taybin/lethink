@@ -1,3 +1,4 @@
+%% @private
 -module(lethink_app).
 
 -behaviour(application).
