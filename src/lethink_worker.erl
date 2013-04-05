@@ -5,49 +5,56 @@
          db_create/2,
          db_drop/2,
          use/2,
-         db_list/1]).
+         db_list/1,
+         table_create/3,
+         table_drop/2,
+         table_list/1]).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
     terminate/2, code_change/3]).
 
 -include("ql2_pb.hrl").
 
--type opts() :: {address, inet:ip_address() | inet:hostname()} |
-                {port, inet:port_number()} |
-                {database, binary()}.
--type res_success() :: {ok, [#datum{}]}.
--type res_error() :: {error, #response{}}.
-
--export_type([opts/0, res_error/0]).
-
 -record(state, {
     socket :: port(),
-    database :: binary()
+    database :: lethink:name()
 }).
 
 -define(RETHINKDB_VERSION, 16#3f61ba36). % magic number from ql2.proto
 
--spec start_link(any(), [opts()]) -> any().
+-spec start_link(any(), [lethink:connect_options()]) -> any().
 start_link(Ref, Opts) ->
     {ok, Pid} = gen_server:start_link(?MODULE, [Opts], []),
     lethink_server:add_worker(Ref, Pid),
     {ok, Pid}.
 
--spec db_create(pid(), binary()) -> {ok, binary()} | res_error().
+-spec db_create(pid(), lethink:name()) -> lethink:response().
 db_create(Pid, Name) ->
     gen_server:call(Pid, {db_create, Name}).
 
--spec db_drop(pid(), binary()) -> {ok, binary()} | res_error().
+-spec db_drop(pid(), lethink:name()) -> lethink:response().
 db_drop(Pid, Name) ->
     gen_server:call(Pid, {db_drop, Name}).
 
--spec db_list(pid()) -> [binary()] | res_error().
+-spec db_list(pid()) -> lethink:response().
 db_list(Pid) ->
     gen_server:call(Pid, {db_list}).
 
--spec use(pid(), binary()) -> ok.
+-spec use(pid(), lethink:name()) -> ok.
 use(Pid, Name) ->
     gen_server:cast(Pid, {use, Name}).
+
+-spec table_create(pid(), lethink:name(), [lethink:table_options()]) -> lethink:response().
+table_create(Pid, Table, Opts) ->
+    gen_server:call(Pid, {table_create, Table, Opts}).
+
+-spec table_drop(pid(), lethink:name()) -> lethink:response().
+table_drop(Pid, Table) ->
+    gen_server:call(Pid, {table_drop, Table}).
+
+-spec table_list(pid()) -> lethink:response().
+table_list(Pid) ->
+    gen_server:call(Pid, {table_list}).
 
 init([Opts]) ->
     Host = proplists:get_value(address, Opts, {127,0,0,1}),
@@ -63,31 +70,33 @@ init([Opts]) ->
 
 handle_call({db_create, Name}, _From, State) ->
     Query = ql2_wrapper:db_create(Name),
-    Response = case send_and_recv(Query, State#state.socket) of
-        {ok, [Datum]} ->
-            [Pair] = Datum#datum.r_object,
-            {ok, list_to_binary(Pair#datum_assocpair.key)};
-        Res ->
-            Res
-    end,
-    {reply, Response, State};
+    Reply = send_and_recv(Query, State#state.socket),
+    {reply, Reply, State};
 
 handle_call({db_drop, Name}, _From, State) ->
     Query = ql2_wrapper:db_drop(Name),
-    Response = case send_and_recv(Query, State#state.socket) of
-        {ok, [Datum]} ->
-            [Pair] = Datum#datum.r_object,
-            {ok, list_to_binary(Pair#datum_assocpair.key)};
-        Res ->
-            Res
-    end,
-    {reply, Response, State};
+    Reply = send_and_recv(Query, State#state.socket),
+    {reply, Reply, State};
 
 handle_call({db_list}, _From, State) ->
     Query = ql2_wrapper:db_list(),
-    {ok, [Response]} = send_and_recv(Query, State#state.socket),
-    List = [list_to_binary(Datum#datum.r_str) || Datum <- Response#datum.r_array],
-    {reply, List, State};
+    Reply = send_and_recv(Query, State#state.socket),
+    {reply, Reply, State};
+
+handle_call({table_create, Name, Opts}, _From, State) ->
+    Query = ql2_wrapper:table_create(State#state.database, Name, Opts),
+    Reply = send_and_recv(Query, State#state.socket),
+    {reply, Reply, State};
+
+handle_call({table_drop, Name}, _From, State) ->
+    Query = ql2_wrapper:table_drop(State#state.database, Name),
+    Reply = send_and_recv(Query, State#state.socket),
+    {reply, Reply, State};
+
+handle_call({table_list}, _From, State) ->
+    Query = ql2_wrapper:table_list(State#state.database),
+    Reply = send_and_recv(Query, State#state.socket),
+    {reply, Reply, State};
 
 handle_call(_Message, _From, State) ->
     {reply, ok, State}.
@@ -128,17 +137,20 @@ recv(Socket) ->
     {ok, Response} = gen_tcp:recv(Socket, binary:decode_unsigned(ResponseLength, little)),
     Response.
 
--spec handle_response(#response{}) -> res_success() | res_error().
-handle_response(#response{ type = 'SUCCESS_ATOM'} = Response) ->
-    {ok, Response#response.response};
-handle_response(#response{ type = 'SUCCESS_SEQUENCE'} = Response) ->
-    {ok, Response#response.response};
-handle_response(#response{ type = 'SUCCESS_PARTIAL'} = Response) ->
-    {ok, Response#response.response};
+-spec handle_response(#response{}) -> lethink:response().
+handle_response(#response{ type = 'SUCCESS_ATOM', response = [Datum]}) ->
+    {ok, ql2_util:datum_value(Datum)};
+handle_response(#response{ type = 'SUCCESS_SEQUENCE', response = [Datum]}) ->
+    {ok, ql2_util:datum_value(Datum)};
+handle_response(#response{ type = 'SUCCESS_PARTIAL', response = [Datum]}) ->
+    {ok, ql2_util:datum_value(Datum)};
 
-handle_response(#response{ type = 'CLIENT_ERROR'} = Response) ->
-    {error, Response};
-handle_response(#response{ type = 'COMPILE_ERROR'} = Response) ->
-    {error, Response};
-handle_response(#response{ type = 'RUNTIME_ERROR'} = Response) ->
-    {error, Response}.
+handle_response(#response{ type = 'CLIENT_ERROR', response = [Datum]} = Response) ->
+    ErrorMsg = ql2_util:datum_value(Datum),
+    {error, ErrorMsg, Response#response.type, Response#response.backtrace};
+handle_response(#response{ type = 'COMPILE_ERROR', response = [Datum]} = Response) ->
+    ErrorMsg = ql2_util:datum_value(Datum),
+    {error, ErrorMsg, Response#response.type, Response#response.backtrace};
+handle_response(#response{ type = 'RUNTIME_ERROR', response = [Datum]} = Response) ->
+    ErrorMsg = ql2_util:datum_value(Datum),
+    {error, ErrorMsg, Response#response.type, Response#response.backtrace}.
