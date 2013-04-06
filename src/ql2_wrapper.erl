@@ -12,7 +12,7 @@
 
 -include("ql2_pb.hrl").
 
--spec db_create(binary()) -> #query{}.
+-spec db_create(lethink:name()) -> #query{}.
 db_create(Name) ->
     #query{
         type = 'START',
@@ -23,7 +23,7 @@ db_create(Name) ->
         token = lethink_token:get()
     }.
 
--spec db_drop(binary()) -> #query{}.
+-spec db_drop(lethink:name()) -> #query{}.
 db_drop(Name) ->
     #query{
         type = 'START',
@@ -44,7 +44,7 @@ db_list() ->
         token = lethink_token:get()
     }.
 
--spec table_create(binary(), binary(), [lethink:table_options()]) -> #query{}.
+-spec table_create(lethink:name(), lethink:name(), [lethink:table_options()]) -> #query{}.
 table_create(Database, Name, Options) ->
     #query{
         type = 'START',
@@ -70,7 +70,7 @@ table_option_term({primary_key, Value}) ->
 table_option_term({cache_size, Value}) ->
     ql2_util:term_assocpair(cache_size, 'R_NUM', Value).
 
--spec table_drop(binary(), binary()) -> #query{}.
+-spec table_drop(lethink:name(), lethink:name()) -> #query{}.
 table_drop(Database, Name) ->
     #query{
         type = 'START',
@@ -87,7 +87,7 @@ table_drop(Database, Name) ->
         token = lethink_token:get()
     }.
 
--spec table_list(binary()) -> #query{}.
+-spec table_list(lethink:name()) -> #query{}.
 table_list(Database) ->
     #query{
         type = 'START',

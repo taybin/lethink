@@ -23,10 +23,10 @@
 
 -type connect_options() :: {address, inet:ip_address() | inet:hostname()} |
                            {port, inet:port_number()} |
-                           {database, binary()}.
+                           {database, name()}.
 
--type table_options() :: {datacenter, binary()} |
-                         {primary_key, binary()} |
+-type table_options() :: {datacenter, name()} |
+                         {primary_key, name()} |
                          {cache_size, pos_integer()}.
 
 -export_type([response/0,
@@ -74,6 +74,7 @@ remove_pool(Ref) ->
             {error, Reason}
     end.
 
+%% @doc Change all connections in pool to use database for queries.
 -spec use(any(), name()) -> ok.
 use(Ref, Db) ->
     WorkerPids = lethink_server:get_all_workers(Ref),
