@@ -37,10 +37,10 @@ deps/proper:
 tests: clean deps/proper all eunit ct
 
 eunit:
-	@$(REBAR) -C rebar.tests.config eunit skip_deps=true
+	@$(REBAR) eunit skip_deps=true
 
 ct:
-	@$(REBAR) -C rebar.tests.config ct skip_deps=true suites=
+	@$(REBAR) ct skip_deps=true
 
 # Dialyzer
 

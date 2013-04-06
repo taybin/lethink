@@ -4,3 +4,5 @@ ebin
 doc
 .eunit
 include
+logs
+test/*.beam
