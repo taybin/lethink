@@ -30,15 +30,24 @@ start_link(Ref, Opts) ->
 
 -spec db_create(pid(), lethink:name()) -> lethink:response().
 db_create(Pid, Name) ->
-    gen_server:call(Pid, {db_create, Name}).
+    QueryFun = fun(_Database) ->
+            ql2_wrapper:db_create(Name)
+    end,
+    gen_server:call(Pid, {execute_query, QueryFun}).
 
 -spec db_drop(pid(), lethink:name()) -> lethink:response().
 db_drop(Pid, Name) ->
-    gen_server:call(Pid, {db_drop, Name}).
+    QueryFun = fun(_Database) ->
+            ql2_wrapper:db_drop(Name)
+    end,
+    gen_server:call(Pid, {execute_query, QueryFun}).
 
 -spec db_list(pid()) -> lethink:response().
 db_list(Pid) ->
-    gen_server:call(Pid, {db_list}).
+    QueryFun = fun(_Database) ->
+            ql2_wrapper:db_list()
+    end,
+    gen_server:call(Pid, {execute_query, QueryFun}).
 
 -spec use(pid(), lethink:name()) -> ok.
 use(Pid, Name) ->
@@ -46,15 +55,24 @@ use(Pid, Name) ->
 
 -spec table_create(pid(), lethink:name(), [lethink:table_options()]) -> lethink:response().
 table_create(Pid, Table, Opts) ->
-    gen_server:call(Pid, {table_create, Table, Opts}).
+    QueryFun = fun(Database) ->
+            ql2_wrapper:table_create(Database, Table, Opts)
+    end,
+    gen_server:call(Pid, {execute_query, QueryFun}).
 
 -spec table_drop(pid(), lethink:name()) -> lethink:response().
 table_drop(Pid, Table) ->
-    gen_server:call(Pid, {table_drop, Table}).
+    QueryFun = fun(Database) ->
+            ql2_wrapper:table_drop(Database, Table)
+    end,
+    gen_server:call(Pid, {execute_query, QueryFun}).
 
 -spec table_list(pid()) -> lethink:response().
 table_list(Pid) ->
-    gen_server:call(Pid, {table_list}).
+    QueryFun = fun(Database) ->
+            ql2_wrapper:table_list(Database)
+    end,
+    gen_server:call(Pid, {execute_query, QueryFun}).
 
 init([Opts]) ->
     Host = proplists:get_value(address, Opts, {127,0,0,1}),
@@ -68,33 +86,8 @@ init([Opts]) ->
     },
     {ok, State}.
 
-handle_call({db_create, Name}, _From, State) ->
-    Query = ql2_wrapper:db_create(Name),
-    Reply = send_and_recv(Query, State#state.socket),
-    {reply, Reply, State};
-
-handle_call({db_drop, Name}, _From, State) ->
-    Query = ql2_wrapper:db_drop(Name),
-    Reply = send_and_recv(Query, State#state.socket),
-    {reply, Reply, State};
-
-handle_call({db_list}, _From, State) ->
-    Query = ql2_wrapper:db_list(),
-    Reply = send_and_recv(Query, State#state.socket),
-    {reply, Reply, State};
-
-handle_call({table_create, Name, Opts}, _From, State) ->
-    Query = ql2_wrapper:table_create(State#state.database, Name, Opts),
-    Reply = send_and_recv(Query, State#state.socket),
-    {reply, Reply, State};
-
-handle_call({table_drop, Name}, _From, State) ->
-    Query = ql2_wrapper:table_drop(State#state.database, Name),
-    Reply = send_and_recv(Query, State#state.socket),
-    {reply, Reply, State};
-
-handle_call({table_list}, _From, State) ->
-    Query = ql2_wrapper:table_list(State#state.database),
+handle_call({execute_query, QueryFun}, _From, State) ->
+    Query = QueryFun(State#state.database),
     Reply = send_and_recv(Query, State#state.socket),
     {reply, Reply, State};
 
