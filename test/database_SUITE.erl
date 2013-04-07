@@ -42,6 +42,7 @@ init_per_suite(Config) ->
 
 end_per_suite(_Config) ->
     lethink:remove_pool(test_pool),
+    lethink:stop(),
     ok.
 
 %% Tests
@@ -49,6 +50,7 @@ create(_Config) ->
     {ok, _} = lethink:db_create(test_pool, <<"test_bin">>),
     {ok, _} = lethink:db_create(test_pool, "test_str"),
     {ok, Dbs} = lethink:db_list(test_pool),
+    true = lists:all(fun is_binary/1, Dbs),
     true = lists:member(<<"test_bin">>, Dbs),
     true = lists:member(<<"test_str">>, Dbs),
     {error, _, _, _} = lethink:db_create(test_pool, <<"test_bin">>),
@@ -59,6 +61,6 @@ drop(_Config) ->
     {ok, _} = lethink:db_drop(test_pool, "test_str"),
     {ok, Dbs} = lethink:db_list(test_pool),
     false = lists:member(<<"test_bin">>, Dbs),
-    false = lists:member("test_str", Dbs),
+    false = lists:member(<<"test_str">>, Dbs),
     {error, _, _, _} = lethink:db_drop(test_pool, <<"test_bin">>),
     {error, _, _, _} = lethink:db_drop(test_pool, "test_str").
