@@ -17,7 +17,7 @@
 
 -record(state, {
     socket :: port(),
-    database :: lethink:name()
+    database :: binary()
 }).
 
 -define(RETHINKDB_VERSION, 16#3f61ba36). % magic number from ql2.proto
@@ -28,15 +28,15 @@ start_link(Ref, Opts) ->
     lethink_server:add_worker(Ref, Pid),
     {ok, Pid}.
 
--spec db_create(pid(), lethink:name()) -> lethink:response().
-db_create(Pid, Name) ->
+-spec db_create(pid(), binary()) -> lethink:response().
+db_create(Pid, Name) when is_binary(Name) ->
     QueryFun = fun(_Database) ->
             ql2_wrapper:db_create(Name)
     end,
     gen_server:call(Pid, {execute_query, QueryFun}).
 
--spec db_drop(pid(), lethink:name()) -> lethink:response().
-db_drop(Pid, Name) ->
+-spec db_drop(pid(), binary()) -> lethink:response().
+db_drop(Pid, Name) when is_binary(Name) ->
     QueryFun = fun(_Database) ->
             ql2_wrapper:db_drop(Name)
     end,
@@ -49,19 +49,19 @@ db_list(Pid) ->
     end,
     gen_server:call(Pid, {execute_query, QueryFun}).
 
--spec use(pid(), lethink:name()) -> ok.
-use(Pid, Name) ->
+-spec use(pid(), binary()) -> ok.
+use(Pid, Name) when is_binary(Name) ->
     gen_server:cast(Pid, {use, Name}).
 
--spec table_create(pid(), lethink:name(), [lethink:table_options()]) -> lethink:response().
-table_create(Pid, Table, Opts) ->
+-spec table_create(pid(), binary(), [lethink:table_options()]) -> lethink:response().
+table_create(Pid, Table, Opts) when is_binary(Table) ->
     QueryFun = fun(Database) ->
             ql2_wrapper:table_create(Database, Table, Opts)
     end,
     gen_server:call(Pid, {execute_query, QueryFun}).
 
--spec table_drop(pid(), lethink:name()) -> lethink:response().
-table_drop(Pid, Table) ->
+-spec table_drop(pid(), binary()) -> lethink:response().
+table_drop(Pid, Table) when is_binary(Table) ->
     QueryFun = fun(Database) ->
             ql2_wrapper:table_drop(Database, Table)
     end,

@@ -2,9 +2,9 @@
 -module(ql2_util).
 
 -export([datum_value/1,
-         term_assocpair/3,
-         datum_term/2,
-         datum/2]).
+         term_assocpair/2,
+         datum_term/1,
+         datum/1]).
 
 -include("ql2_pb.hrl").
 
@@ -26,30 +26,43 @@ datum_value(#datum{ type = 'R_OBJECT', r_object = Objects }) ->
 datum_assocpair_tuple(Obj) ->
     {list_to_binary(Obj#datum_assocpair.key), datum_value(Obj#datum_assocpair.val)}.
 
--spec term_assocpair(atom(), atom(), any()) -> #term_assocpair{}.
-term_assocpair(Key, Type, Value) ->
+-spec term_assocpair(atom(), any()) -> #term_assocpair{}.
+term_assocpair(Key, Value) ->
     #term_assocpair {
         key = atom_to_binary(Key, latin1),
-        val = datum_term(Type, Value)
+        val = datum_term(Value)
     }.
 
--spec datum_term(atom(), any()) -> #term{}.
-datum_term(Type, Value) ->
+-spec datum_term(any()) -> #term{}.
+datum_term(Value) ->
     #term {
         type = 'DATUM',
-        datum = datum(Type, Value)
+        datum = datum(Value)
     }.
 
-datum('R_STR', Value) ->
+
+% @doc create Datums from the four basic types.  Arrays and objects
+% are created via MAKE_ARRAY and MAKE_OBJ on the server since it's
+% cheaper that way.
+datum(null) ->
     #datum {
-        type = 'R_STR',
-        r_str = Value
+        type = 'R_NULL'
     };
 
-datum('R_NUM', Value) ->
+datum(V) when is_boolean(V) ->
+    #datum {
+        type = 'R_BOOL',
+        r_bool = V
+    };
+
+datum(V) when is_number(V) ->
     #datum {
         type = 'R_NUM',
-        r_num = Value
+        r_num = V
+    };
+
+datum(V) when is_binary(V) ->
+    #datum {
+        type = 'R_STR',
+        r_str = V
     }.
-
-
