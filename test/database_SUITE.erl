@@ -5,8 +5,9 @@
          init_per_suite/1,
          end_per_suite/1]).
 
--export([create/1,
-         drop/1]).
+-export([databases/1,
+         tables/1,
+         use/1]).
 
 %% Optional suite settings
 %%--------------------------------------------------------------------
@@ -15,11 +16,12 @@
 %%--------------------------------------------------------------------
 
 suite() ->
-    [{timetrap,{seconds,60}}].
+    [{timetrap,{minutes,5}}].
 
 all() -> 
-    [create,
-     drop].
+    [databases,
+     tables,
+     use].
 
 %% Optional suite pre test initialization
 %%--------------------------------------------------------------------
@@ -32,6 +34,11 @@ all() ->
 init_per_suite(Config) ->
     lethink:start(),
     lethink:add_pool(test_pool, 1),
+    lethink:db_drop(test_pool, <<"test_bin">>),
+    lethink:db_drop(test_pool, <<"test_str">>),
+    lethink:db_drop(test_pool, <<"table_test">>),
+    lethink:db_drop(test_pool, <<"use_test1">>),
+    lethink:db_drop(test_pool, <<"use_test2">>),
     Config.
 
 %% Optional suite post test wind down
@@ -46,7 +53,7 @@ end_per_suite(_Config) ->
     ok.
 
 %% Tests
-create(_Config) ->
+databases(_Config) ->
     {ok, _} = lethink:db_create(test_pool, <<"test_bin">>),
     {ok, _} = lethink:db_create(test_pool, "test_str"),
     {ok, Dbs} = lethink:db_list(test_pool),
@@ -54,13 +61,45 @@ create(_Config) ->
     true = lists:member(<<"test_bin">>, Dbs),
     true = lists:member(<<"test_str">>, Dbs),
     {error, _, _, _} = lethink:db_create(test_pool, <<"test_bin">>),
-    {error, _, _, _} = lethink:db_create(test_pool, "test_str").
-
-drop(_Config) ->
+    {error, _, _, _} = lethink:db_create(test_pool, "test_str"),
     {ok, _} = lethink:db_drop(test_pool, <<"test_bin">>),
     {ok, _} = lethink:db_drop(test_pool, "test_str"),
-    {ok, Dbs} = lethink:db_list(test_pool),
-    false = lists:member(<<"test_bin">>, Dbs),
-    false = lists:member(<<"test_str">>, Dbs),
+    {ok, Dbs2} = lethink:db_list(test_pool),
+    false = lists:member(<<"test_bin">>, Dbs2),
+    false = lists:member(<<"test_str">>, Dbs2),
     {error, _, _, _} = lethink:db_drop(test_pool, <<"test_bin">>),
     {error, _, _, _} = lethink:db_drop(test_pool, "test_str").
+
+tables(_Config) ->
+    {ok, _} = lethink:db_create(test_pool, <<"table_test">>),
+    ok = lethink:use(test_pool, <<"table_test">>),
+    {ok, []} = lethink:table_list(test_pool),
+    {ok, _} = lethink:table_create(test_pool, <<"table_bin">>),
+    {ok, _} = lethink:table_create(test_pool, "table_str"),
+    {ok, Tables1} = lethink:table_list(test_pool),
+    true = lists:all(fun is_binary/1, Tables1),
+    true = lists:member(<<"table_bin">>, Tables1),
+    true = lists:member(<<"table_str">>, Tables1),
+    {error, _, _, _} = lethink:table_create(test_pool, <<"table_bin">>),
+    {error, _, _, _} = lethink:table_create(test_pool, "table_str"),
+    {ok, _} = lethink:table_drop(test_pool, <<"table_bin">>),
+    {ok, _} = lethink:table_drop(test_pool, "table_str"),
+    {ok, Tables2} = lethink:table_list(test_pool),
+    false = lists:member(<<"table_bin">>, Tables2),
+    false = lists:member(<<"table_str">>, Tables2),
+    {error, _, _, _} = lethink:table_drop(test_pool, <<"table_bin">>),
+    {error, _, _, _} = lethink:table_drop(test_pool, "table_str"),
+    {ok, _} = lethink:db_drop(test_pool, <<"table_test">>).
+
+use(_Config) ->
+    {ok, _} = lethink:db_create(test_pool, <<"use_test1">>),
+    ok = lethink:use(test_pool, <<"use_test1">>),
+    {ok, _} = lethink:table_create(test_pool, <<"table1">>),
+    {ok, Tables1} = lethink:table_list(test_pool),
+    true = lists:member(<<"table1">>, Tables1),
+    {ok, _} = lethink:db_create(test_pool, <<"use_test2">>),
+    ok = lethink:use(test_pool, <<"use_test2">>),
+    {ok, Tables2} = lethink:table_list(test_pool),
+    false = lists:member(<<"table1">>, Tables2),
+    {ok, _} = lethink:db_drop(test_pool, <<"use_test1">>),
+    {ok, _} = lethink:db_drop(test_pool, <<"use_test2">>).
