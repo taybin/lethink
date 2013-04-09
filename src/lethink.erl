@@ -7,6 +7,7 @@
         add_pool/3,
         remove_pool/1,
         use/2,
+        query/2,
         db_create/2,
         db_drop/2,
         db_list/1,
@@ -19,6 +20,8 @@
 -type response() :: success() | error().
 -type success() :: {ok, [any()]}.
 -type error() :: {error, binary(), atom(), any()}.
+
+-type json() :: null | boolean() | integer() | float() | binary() | {binary(), json()} | [json()].
 
 -type connect_options() :: {address, inet:ip_address() | inet:hostname()} |
                            {port, inet:port_number()} |
@@ -79,6 +82,11 @@ use(Ref, Db) when is_binary(Db) ->
     lists:foreach(fun(Pid) ->
                 lethink_worker:use(Pid, Db)
         end, WorkerPids).
+
+query(Ref, OpList) ->
+    Term = lists:foldl(fun lethink_ast:build_query/2, [], OpList),
+    WorkerPid = lethink_server:get_worker(Ref),
+    lethink_worker:query(WorkerPid, Term).
 
 -spec db_create(any(), binary()) -> response().
 db_create(Ref, Db) when is_binary(Db) ->

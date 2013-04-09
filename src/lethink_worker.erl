@@ -5,6 +5,7 @@
          db_create/2,
          db_drop/2,
          use/2,
+         query/2,
          db_list/1,
          table_create/3,
          table_drop/2,
@@ -53,6 +54,9 @@ db_list(Pid) ->
 use(Pid, Name) when is_binary(Name) ->
     gen_server:cast(Pid, {use, Name}).
 
+query(Pid, Query) ->
+    gen_server:call(Pid, {query, Query}).
+
 -spec table_create(pid(), binary(), [lethink:table_options()]) -> lethink:response().
 table_create(Pid, Table, Opts) when is_binary(Table) ->
     QueryFun = fun(Database) ->
@@ -88,6 +92,16 @@ init([Opts]) ->
 
 handle_call({execute_query, QueryFun}, _From, State) ->
     Query = QueryFun(State#state.database),
+    Reply = send_and_recv(Query, State#state.socket),
+    {reply, Reply, State};
+
+handle_call({query, Term}, _From, State) ->
+    Query = #query {
+        type = 'START',
+        query = Term,
+        token = lethink_token:get(),
+        global_optargs = [ql2_util:global_db(State#state.database)]
+    },
     Reply = send_and_recv(Query, State#state.socket),
     {reply, Reply, State};
 
