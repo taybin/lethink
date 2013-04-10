@@ -2,17 +2,15 @@
 -module(lethink_worker).
 
 -export([start_link/2,
-         db_create/2,
-         db_drop/2,
          use/2,
-         query/2,
-         db_list/1,
-         table_create/3,
-         table_drop/2,
-         table_list/1]).
+         query/2]).
 
--export([init/1, handle_call/3, handle_cast/2, handle_info/2,
-    terminate/2, code_change/3]).
+-export([init/1,
+        handle_call/3,
+        handle_cast/2,
+        handle_info/2,
+        terminate/2,
+        code_change/3]).
 
 -include("ql2_pb.hrl").
 
@@ -29,54 +27,12 @@ start_link(Ref, Opts) ->
     lethink_server:add_worker(Ref, Pid),
     {ok, Pid}.
 
--spec db_create(pid(), binary()) -> lethink:response().
-db_create(Pid, Name) when is_binary(Name) ->
-    QueryFun = fun(_Database) ->
-            ql2_wrapper:db_create(Name)
-    end,
-    gen_server:call(Pid, {execute_query, QueryFun}).
-
--spec db_drop(pid(), binary()) -> lethink:response().
-db_drop(Pid, Name) when is_binary(Name) ->
-    QueryFun = fun(_Database) ->
-            ql2_wrapper:db_drop(Name)
-    end,
-    gen_server:call(Pid, {execute_query, QueryFun}).
-
--spec db_list(pid()) -> lethink:response().
-db_list(Pid) ->
-    QueryFun = fun(_Database) ->
-            ql2_wrapper:db_list()
-    end,
-    gen_server:call(Pid, {execute_query, QueryFun}).
-
 -spec use(pid(), binary()) -> ok.
 use(Pid, Name) when is_binary(Name) ->
     gen_server:cast(Pid, {use, Name}).
 
 query(Pid, Query) ->
     gen_server:call(Pid, {query, Query}).
-
--spec table_create(pid(), binary(), [lethink:table_options()]) -> lethink:response().
-table_create(Pid, Table, Opts) when is_binary(Table) ->
-    QueryFun = fun(Database) ->
-            ql2_wrapper:table_create(Database, Table, Opts)
-    end,
-    gen_server:call(Pid, {execute_query, QueryFun}).
-
--spec table_drop(pid(), binary()) -> lethink:response().
-table_drop(Pid, Table) when is_binary(Table) ->
-    QueryFun = fun(Database) ->
-            ql2_wrapper:table_drop(Database, Table)
-    end,
-    gen_server:call(Pid, {execute_query, QueryFun}).
-
--spec table_list(pid()) -> lethink:response().
-table_list(Pid) ->
-    QueryFun = fun(Database) ->
-            ql2_wrapper:table_list(Database)
-    end,
-    gen_server:call(Pid, {execute_query, QueryFun}).
 
 init([Opts]) ->
     Host = proplists:get_value(address, Opts, {127,0,0,1}),
@@ -89,11 +45,6 @@ init([Opts]) ->
             database = Database
     },
     {ok, State}.
-
-handle_call({execute_query, QueryFun}, _From, State) ->
-    Query = QueryFun(State#state.database),
-    Reply = send_and_recv(Query, State#state.socket),
-    {reply, Reply, State};
 
 handle_call({query, Term}, _From, State) ->
     Query = #query {

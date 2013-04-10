@@ -39,7 +39,7 @@ term_assocpair(Key, Value) ->
 -spec global_db(binary()) -> #query_assocpair{}.
 global_db(Value) ->
     #query_assocpair {
-        key = "db",
+        key = <<"db">>,
         val = #term {
             type = 'DB',
             args = datum_term(Value)
@@ -52,16 +52,13 @@ datum_term({Items}) when is_list(Items) ->
         type = 'MAKE_OBJ',
         optargs = [ datum_term(Pair) || Pair <- Items ]
     };
-
 datum_term({Key, Value}) ->
     term_assocpair(Key, Value);
-
 datum_term(Items) when is_list(Items) ->
     #term {
         type = 'MAKE_ARRAY',
         args = [ datum_term(I) || I <- Items ]
     };
-
 datum_term(Value) ->
     #term {
         type = 'DATUM',
@@ -71,7 +68,7 @@ datum_term(Value) ->
 % @doc create Datums from the four basic types.  Arrays and objects
 % are created via MAKE_ARRAY and MAKE_OBJ on the server since it's
 % cheaper that way.
--spec datum(null | boolean() | float() | integer()) -> #datum{}.
+-spec datum(null | boolean() | number() | binary()) -> #datum{}.
 datum(null) ->
     #datum {
         type = 'R_NULL'

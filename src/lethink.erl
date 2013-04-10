@@ -7,21 +7,14 @@
         add_pool/3,
         remove_pool/1,
         use/2,
-        query/2,
-        db_create/2,
-        db_drop/2,
-        db_list/1,
-        table_create/2,
-        table_create/3,
-        table_drop/2,
-        table_list/1
+        query/2
     ]).
 
 -type response() :: success() | error().
 -type success() :: {ok, [any()]}.
 -type error() :: {error, binary(), atom(), any()}.
 
--type json() :: null | boolean() | integer() | float() | binary() | {binary(), json()} | [json()].
+-type json() :: null | boolean() | number() | binary() | {binary(), json()} | [json()].
 
 -type connect_options() :: {address, inet:ip_address() | inet:hostname()} |
                            {port, inet:port_number()} |
@@ -84,41 +77,6 @@ use(Ref, Db) when is_binary(Db) ->
         end, WorkerPids).
 
 query(Ref, OpList) ->
-    Term = lists:foldl(fun lethink_ast:build_query/2, [], OpList),
+    Term = lethink_ast:build_query(OpList),
     WorkerPid = lethink_server:get_worker(Ref),
     lethink_worker:query(WorkerPid, Term).
-
--spec db_create(any(), binary()) -> response().
-db_create(Ref, Db) when is_binary(Db) ->
-    WorkerPid = lethink_server:get_worker(Ref),
-    lethink_worker:db_create(WorkerPid, Db).
-
--spec db_drop(any(), binary()) -> response().
-db_drop(Ref, Db) when is_binary(Db) ->
-    WorkerPid = lethink_server:get_worker(Ref),
-    lethink_worker:db_drop(WorkerPid, Db).
-
--spec db_list(any()) -> response().
-db_list(Ref) ->
-    WorkerPid = lethink_server:get_worker(Ref),
-    lethink_worker:db_list(WorkerPid).
-
-%% @equiv table_create(any(), binary(), [])
--spec table_create(any(), binary()) -> response().
-table_create(Ref, Table) when is_binary(Table) ->
-    table_create(Ref, Table, []).
-
--spec table_create(any(), binary(), [table_options()]) -> response().
-table_create(Ref, Table, Opts) when is_binary(Table) ->
-     WorkerPid = lethink_server:get_worker(Ref),
-     lethink_worker:table_create(WorkerPid, Table, Opts).
-
--spec table_drop(any(), binary()) -> response().
-table_drop(Ref, Table) when is_binary(Table) ->
-    WorkerPid = lethink_server:get_worker(Ref),
-    lethink_worker:table_drop(WorkerPid, Table).
-
--spec table_list(any()) -> response().
-table_list(Ref) ->
-    WorkerPid = lethink_server:get_worker(Ref),
-    lethink_worker:table_list(WorkerPid).
