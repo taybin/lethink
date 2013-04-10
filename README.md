@@ -1,6 +1,12 @@
 Lethink
 =======
 
+An erlang driver for [rethinkdb](http://rethinkdb.com).
+
+Status
+------
+[![Build Status](https://travis-ci.org/taybin/lethink.png?branch=master)](https://travis-ci.org/taybin/lethink)
+
 Use
 ---
 
