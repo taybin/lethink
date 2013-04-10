@@ -7,7 +7,18 @@ Use
 ```
 > lethink:start().
 > lethink:add_pool(my_db_pool, 5, [{database, "localhost"}, {port, 28015}]).
-> lethink:db_create(my_db_pool, <<"superheroes">>).
-> lethink:db_list(my_db_pool).
-> lethink:db_drop(my_db_pool, <<"superheroes">>).
+> lethink:query(my_db_pool, [{db_create, <<"superheroes">>}]).
+> lethink:query(my_db_pool, [{db_list}]).
+> lethink:query(my_db_pool, [{db_drop, <<"superheroes">>}]).
+> lethink:query(my_db_pool, [{db, <<"superheroes">>}, {table_create, <<"marvel">>}]).
+> lethink:query(my_db_pool, [{db, <<"superheroes">>},
+                             {table_create, <<"marvel">>, [{primary_key, <<"name">>}]}]).
+> lethink:query(my_db_pool, [{db, <<"superheroes">>}, {table_list}]).
+> lethink:query(my_db_pool, [{db, <<"superheroes">>}, {table_drop, <<"marvel">>}]).
+> lethink:use(my_db_pool, <<"superheroes">>).
+> JsonProplist = [{[{<<"id">>, 5}, {<<"name">>, <<"batman">>}, {<<"rich">>, true}, {<<"cars">>, [1,2,3]}]},
+                  {[{<<"id">>, 6}, {<<"name">>, <<"robin">>}, {<<"rich">>, false}, {<<"cars">>, null}]}].
+> lethink:use(my_db_pool, [{table, <<"marvel">>},
+                           {insert, JsonProplist}].
+> lethink:use(my_db_pool, [{table, <<"marvel">>}, {get, 5}]).
 ```
