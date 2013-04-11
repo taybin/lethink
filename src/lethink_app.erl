@@ -11,7 +11,6 @@
 %% ===================================================================
 
 start(_StartType, _StartArgs) ->
-    lethink_token:start(),
     lethink_sup:start_link().
 
 stop(_State) ->

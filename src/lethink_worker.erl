@@ -16,7 +16,8 @@
 
 -record(state, {
     socket :: port(),
-    database :: binary()
+    database :: binary(),
+    token = 1 :: pos_integer()
 }).
 
 -define(RETHINKDB_VERSION, 16#3f61ba36). % magic number from ql2.proto
@@ -50,11 +51,11 @@ handle_call({query, Term}, _From, State) ->
     Query = #query {
         type = 'START',
         query = Term,
-        token = lethink_token:get(),
+        token = State#state.token,
         global_optargs = [ql2_util:global_db(State#state.database)]
     },
     Reply = send_and_recv(Query, State#state.socket),
-    {reply, Reply, State};
+    {reply, Reply, State#state{ token = State#state.token + 1 }};
 
 handle_call(_Message, _From, State) ->
     {reply, ok, State}.
