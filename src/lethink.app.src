@@ -8,5 +8,5 @@
                   stdlib
                  ]},
   {mod, { lethink_app, []}},
-  {env, []}
+  {env, [{timeout, 30000}]}
  ]}.

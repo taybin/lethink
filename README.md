@@ -12,6 +12,7 @@ Use
 
 ```
 > lethink:start().
+> application:set_env(lethink, timeout, 60000).
 > lethink:add_pool(my_db_pool, 5, [{database, "localhost"}, {port, 28015}]).
 > lethink:query(my_db_pool, [{db_create, <<"superheroes">>}]).
 > lethink:query(my_db_pool, [{db_list}]).

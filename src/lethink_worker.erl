@@ -33,7 +33,8 @@ use(Pid, Name) when is_binary(Name) ->
     gen_server:cast(Pid, {use, Name}).
 
 query(Pid, Query) ->
-    gen_server:call(Pid, {query, Query}).
+    Timeout = application:get_env(lethink, timeout, 30000),
+    gen_server:call(Pid, {query, Query}, Timeout).
 
 init([Opts]) ->
     Host = proplists:get_value(address, Opts, {127,0,0,1}),
