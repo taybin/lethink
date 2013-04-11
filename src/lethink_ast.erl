@@ -159,23 +159,28 @@ insert(Data, #term{ type = 'TABLE' } = Table) ->
 insert(_, _) ->
     {error, <<"insert must follow table operator">>}.
 
--spec insert(lethink:json(), upsert, #term{}) -> build_result().
-insert(Data, upsert, #term{ type = 'TABLE' } = Table) ->
+-spec insert(lethink:json(), [lethink:insert_options()], #term{}) -> build_result().
+insert(Data, Options, #term{ type = 'TABLE' } = Table) ->
     #term {
         type = 'INSERT',
         args = [Table] ++ [ql2_util:datum_term(Data)],
-        optargs = [ql2_util:term_assocpair(<<"upsert">>, true)]
+        optargs = [ insert_option_term(Opt) || Opt <- Options ]
     };
 insert(_, _, _) ->
     {error, <<"insert must follow table operator">>}.
 
--spec get(binary(), #term{}) -> build_result().
-get(Key, #term{ type = 'TABLE' } = Table) when is_binary(Key) ->
+%% @private
+-spec insert_option_term(lethink:insert_options()) -> #term_assocpair{}.
+insert_option_term({upsert, Value}) when is_binary(Value) ->
+    ql2_util:term_assocpair(upsert, Value).
+
+-spec get(binary() | number(), #term{}) -> build_result().
+get(Key, #term{ type = 'TABLE' } = Table) when is_binary(Key); is_number(Key) ->
     #term {
         type = 'GET',
         args = [Table] ++ [ql2_util:datum_term(Key)]
     };
 get(Key, _) when is_list(Key) ->
-    {error, <<"get key must be binary">>};
+    {error, <<"get key must be binary or number">>};
 get(_, _) ->
     {error, <<"get must follow table operator">>}.
