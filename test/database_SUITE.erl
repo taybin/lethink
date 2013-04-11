@@ -76,7 +76,7 @@ tables(_Config) ->
     {ok, Tables2} = lethink:query(pool, [{db, <<"table_test">>}, {table_list}]),
     false = lists:member(<<"table_bin">>, Tables2),
     {error, _, _, _} = lethink:query(pool, [{db, <<"table_test">>}, {table_drop, <<"table_bin">>}]),
-    {ok, _} = lethink:query(pool, [{db, <<"table_test">>}, {db_drop, <<"table_test">>}]).
+    {ok, _} = lethink:query(pool, [{db_drop, <<"table_test">>}]).
 
 use(_Config) ->
     {ok, _} = lethink:query(pool, [{db_create, <<"use_test1">>}]),
