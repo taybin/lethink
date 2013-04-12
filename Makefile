@@ -56,3 +56,8 @@ build_plt: compile
 
 dialyzer: compile
 	dialyzer -Wno_return --plt $(COMBO_PLT) ebin
+
+# xref
+
+xref:
+	@$(REBAR) xref skip_deps=true
