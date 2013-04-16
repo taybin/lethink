@@ -18,7 +18,7 @@
 suite() ->
     [{timetrap,{minutes,5}}].
 
-all() -> 
+all() ->
     [databases,
      tables,
      use].
