@@ -3,17 +3,22 @@ REBAR=`which rebar || printf ./rebar`
 
 # Main
 
+.PHONY: all
 all: get-deps compile
 
+.PHONY: clean
 clean:
 	@$(REBAR) clean
 
+.PHONY: distclean
 distclean: clean-docs
 	rm -fr deps/
 
+.PHONY: get-deps
 get-deps:
 	@$(REBAR) get-deps
 
+.PHONY: compile
 compile:
 	@$(REBAR) compile
 
