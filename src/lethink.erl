@@ -79,6 +79,7 @@ use(Ref, Db) when is_binary(Db) ->
                 lethink_worker:use(Pid, Db)
         end, WorkerPids).
 
+-spec query(any(), list()) -> response().
 query(Ref, OpList) ->
     Term = lethink_ast:build_query(OpList),
     WorkerPid = lethink_server:get_worker(Ref),

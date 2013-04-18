@@ -32,6 +32,7 @@ start_link(Ref, Opts) ->
 use(Pid, Name) when is_binary(Name) ->
     gen_server:cast(Pid, {use, Name}).
 
+-spec query(pid(), #term{}) -> lethink:response().
 query(Pid, Query) ->
     Timeout = application:get_env(lethink, timeout, 30000),
     gen_server:call(Pid, {query, Query}, Timeout).
@@ -48,6 +49,7 @@ init([Opts]) ->
     },
     {ok, State}.
 
+-spec handle_call(tuple(), pid(), #state{}) -> {reply, lethink:response(), #state{}}.
 handle_call({query, Term}, _From, State) ->
     Query = #query {
         type = 'START',
@@ -79,7 +81,7 @@ terminate(Reason, State) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
--spec send_and_recv(#query{}, port()) -> {ok, any()} | {error, any()}.
+-spec send_and_recv(#query{}, port()) -> lethink:response().
 send_and_recv(Query, Socket) ->
     send(Query, Socket),
     Response = recv(Socket),

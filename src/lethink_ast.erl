@@ -304,7 +304,6 @@ ge(Value, Term) ->
            args = [Term] ++ [expr(Value)]
           }.
 
-
 -spec lt(lethink:json(), #term{}) -> build_result().
 lt(Value, Term) ->
     #term {
@@ -312,14 +311,12 @@ lt(Value, Term) ->
            args = [Term] ++ [expr(Value)]
           }.
 
-
 -spec le(lethink:json(), #term{}) -> build_result().
 le(Value, Term) ->
     #term {
            type = 'LE',
            args = [Term] ++ [expr(Value)]
           }.
-
 
 -spec not_(#term{}) -> build_result().
 not_(Term) ->
