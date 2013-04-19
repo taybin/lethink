@@ -37,6 +37,7 @@ query(Pid, Query) ->
     Timeout = application:get_env(lethink, timeout, 30000),
     gen_server:call(Pid, {query, Query}, Timeout).
 
+-spec init([[{atom, any()}]]) -> {ok, #state{}}.
 init([Opts]) ->
     Host = proplists:get_value(address, Opts, {127,0,0,1}),
     Port = proplists:get_value(port, Opts, 28015),
@@ -49,7 +50,7 @@ init([Opts]) ->
     },
     {ok, State}.
 
--spec handle_call(tuple(), pid(), #state{}) -> {reply, lethink:response(), #state{}}.
+-spec handle_call(tuple(), pid(), #state{}) -> {reply, ok | lethink:response(), #state{}}.
 handle_call({query, Term}, _From, State) ->
     Query = #query {
         type = 'START',
@@ -63,21 +64,25 @@ handle_call({query, Term}, _From, State) ->
 handle_call(_Message, _From, State) ->
     {reply, ok, State}.
 
+-spec handle_cast(any(), #state{}) -> {noreply, #state{}}.
 handle_cast({use, Name}, State) ->
     {noreply, State#state{database = Name}};
 
 handle_cast(_Message, State) ->
     {noreply, State}.
 
+-spec handle_info(any(), #state{}) -> {noreply, #state{}}.
 handle_info(Info, State) ->
     io:fwrite("Info: ~p", [Info]),
     {noreply, State}.
 
+-spec terminate(any(), #state{}) -> ok.
 terminate(Reason, State) ->
     io:fwrite("terminating: ~p", [Reason]),
     gen_tcp:close(State#state.socket),
     ok.
 
+-spec code_change(any(), #state{}, any()) -> {ok, #state{}}.
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 

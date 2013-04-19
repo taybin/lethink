@@ -31,6 +31,7 @@ start_link() ->
 
 %% supervisor.
 
+-spec init([]) -> {ok,{{supervisor:strategy(),non_neg_integer(), non_neg_integer()},[supervisor:child_spec()]}}.
 init([]) ->
 	Procs = [
 		{lethink_worker, {lethink_worker, start_link, []},

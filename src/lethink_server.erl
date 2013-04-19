@@ -75,14 +75,18 @@ get_all_workers(Ref) ->
 
 %% gen_server.
 
+-spec init([]) -> {ok, #state{}}.
 init([]) ->
 	{ok, #state{}}.
 
+-spec handle_call(any(), {pid(), any()}, #state{}) -> {stop, normal, stopped, #state{}} |
+                                                      {reply, ignored, #state{}}.
 handle_call(stop, _From, State) ->
 	{stop, normal, stopped, State};
 handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.
 
+-spec handle_cast(any(), #state{}) -> {noreply, #state{}}.
 handle_cast({add_pool, Ref}, State=#state{pools=Pools}) ->
 	true = ets:insert_new(?TAB, {{pool, Ref}, []}),
 	{noreply, State#state{pools=[Ref|Pools]}};
@@ -97,6 +101,7 @@ handle_cast({add_worker, Ref, Pid}, State) ->
 handle_cast(_Request, State) ->
 	{noreply, State}.
 
+-spec handle_info(any(), #state{}) -> {noreply, #state{}}.
 handle_info({'DOWN', _, process, Pid, _}, State=#state{pools=Pools}) ->
 	_ = [begin
 		Workers = ets:lookup_element(?TAB, {pool, Ref}, 2),
@@ -112,8 +117,10 @@ handle_info({'DOWN', _, process, Pid, _}, State=#state{pools=Pools}) ->
 handle_info(_Info, State) ->
 	{noreply, State}.
 
+-spec terminate(any(), #state{}) -> ok.
 terminate(_Reason, _State) ->
 	ok.
 
+-spec code_change(any(), #state{}, any()) -> {ok, #state{}}.
 code_change(_OldVsn, State, _Extra) ->
 	{ok, State}.

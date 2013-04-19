@@ -24,6 +24,7 @@ start_link() ->
 %% Supervisor callbacks
 %% ===================================================================
 
+-spec init([]) -> {ok,{{supervisor:strategy(),non_neg_integer(), non_neg_integer()},[supervisor:child_spec()]}}.
 init([]) ->
     lethink_server = ets:new(lethink_server, [
             ordered_set, public, named_table, {read_concurrency, true}]),
