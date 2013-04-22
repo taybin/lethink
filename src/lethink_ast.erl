@@ -32,6 +32,10 @@
         le/2,
         not_/1]).
 
+-ifdef(TEST).
+-compile(export_all).
+-endif.
+
 -include("ql2_pb.hrl").
 
 -type build_result() :: #term{} | {error, binary()}.

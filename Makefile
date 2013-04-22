@@ -41,10 +41,10 @@ deps/proper:
 
 tests: clean deps/proper all eunit ct
 
-eunit:
+eunit: all
 	@$(REBAR) eunit skip_deps=true
 
-ct:
+ct: all
 	@$(REBAR) ct skip_deps=true
 
 # Dialyzer
