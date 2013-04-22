@@ -18,7 +18,7 @@ datum_value(#datum{ type = 'R_STR', r_str = Str }) ->
 datum_value(#datum{ type = 'R_ARRAY', r_array = Array }) ->
     [ datum_value(D) || D <- Array ];
 datum_value(#datum{ type = 'R_OBJECT', r_object = Objects }) ->
-    [ datum_assocpair_tuple(Obj) || Obj <- Objects ].
+    {[ datum_assocpair_tuple(Obj) || Obj <- Objects ]}.
 
 -spec datum_assocpair_tuple(#datum_assocpair{}) -> {binary(), any()}.
 datum_assocpair_tuple(Obj) ->

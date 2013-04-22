@@ -1,14 +1,11 @@
--module(math_and_logic_SUITE).
+-module(functions_SUITE).
 -include_lib("common_test/include/ct.hrl").
 -export([suite/0,
          all/0,
          init_per_suite/1,
          end_per_suite/1]).
 
--export([math/1,
-         logic/1]).
-         
-         
+-export([update/1]).
 
 %% Optional suite settings
 %%--------------------------------------------------------------------
@@ -19,9 +16,8 @@
 suite() ->
     [{timetrap,{minutes,5}}].
 
-all() ->
-    [math,
-     logic].
+all() -> 
+    [update].
 
 %% Optional suite pre test initialization
 %%--------------------------------------------------------------------
@@ -34,6 +30,9 @@ all() ->
 init_per_suite(Config) ->
     lethink:start(),
     lethink:add_pool(pool, 1),
+    lethink:query(pool, [{db_create, <<"function_db">>}]),
+    lethink:query(pool, [{db, <<"function_db">>}, {table_create, <<"marvel">>}]),
+    lethink:use(pool, <<"function_db">>),
     Config.
 
 %% Optional suite post test wind down
@@ -43,21 +42,17 @@ init_per_suite(Config) ->
 %%--------------------------------------------------------------------
 
 end_per_suite(_Config) ->
+    lethink:query(pool, [{db_drop, <<"function_db">>}]),
     lethink:remove_pool(pool),
     lethink:stop(),
     ok.
 
 %% Tests
-math(_Config) ->
-    {ok, 3.0} = lethink:query(pool, [{expr, 1}, {add, 2}]),
-    {ok, <<"ab">>} = lethink:query(pool, [{expr, <<"a">>}, {add, <<"b">>}]),
-    {ok, 2.0} = lethink:query(pool, [{expr, 5}, {sub, 3}]),
-    {ok, 2.0} = lethink:query(pool, [{expr, 5.0}, {sub, 3}]),
-    {ok, 2.0} = lethink:query(pool, [{expr, 5}, {sub, 3.0}]),
-    {ok, 2.0} = lethink:query(pool, [{expr, 5.0}, {sub, 3.0}]),
-    {ok, 15.0} = lethink:query(pool, [{expr, 3}, {mul, 5}]),
-    {ok, 3.0} = lethink:query(pool, [{expr, 12}, {div_, 4}]),
-    {ok, 1.0} = lethink:query(pool, [{expr, 8}, {mod, 7}]).
-
-logic(_Config) ->
-    ok.
+update(_Config) ->
+    TestData = [{[{<<"id">>, 1}, {<<"hero">>, <<"batman">>}, {<<"age">>, 30}]},
+                {[{<<"id">>, 2}, {<<"hero">>, <<"superman">>}, {<<"age">>, 50}]}],
+    {ok, _} = lethink:query(pool, [{table, <<"marvel">>}, {insert, TestData}]),
+    {ok, _} = lethink:query(pool, [{table, <<"marvel">>},
+                                   {update, {[{<<"age">>, [{row}, {getattr, <<"age">>}, {add, 1}]}]}}]),
+    {ok, _} = lethink:query(pool, [{table, <<"marvel">>},
+                                   {update, fun(Row) -> [Row, {getattr, <<"age">>}, {add, 1}] end}]).

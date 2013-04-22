@@ -107,8 +107,8 @@ recv(Socket) ->
 -spec handle_response(#response{}) -> lethink:response().
 handle_response(#response{ type = 'SUCCESS_ATOM', response = [Datum]}) ->
     {ok, ql2_util:datum_value(Datum)};
-handle_response(#response{ type = 'SUCCESS_SEQUENCE', response = [Datum]}) ->
-    {ok, ql2_util:datum_value(Datum)};
+handle_response(#response{ type = 'SUCCESS_SEQUENCE', response = Data}) ->
+    {ok, lists:map(fun ql2_util:datum_value/1, Data)};
 handle_response(#response{ type = 'SUCCESS_PARTIAL', response = [Datum]}) ->
     {ok, ql2_util:datum_value(Datum)};
 

@@ -10,13 +10,15 @@
         table_drop/2,
         table_list/1,
         db/2,
-        row/0,
+        row/1,
         getattr/2,
         table/2, table/3,
         insert/2, insert/3,
         get/2,
         update/2,
         expr/1, expr/2,
+        func/1,
+        var/2,
         add/2,
         sub/2,
         mul/2,
@@ -100,11 +102,11 @@ table_create(Name, Options, #term{ type = 'DB' } = Db) when is_binary(Name) ->
 %% @private
 -spec table_option_term(lethink:table_options()) -> #term_assocpair{}.
 table_option_term({datacenter, Value}) when is_binary(Value) ->
-    term_assocpair(datacenter, Value);
+    term_assocpair(atom_to_binary(datacenter, utf8), Value);
 table_option_term({primary_key, Value}) when is_binary(Value) ->
-    term_assocpair(primary_key, Value);
+    term_assocpair(atom_to_binary(primary_key, utf8), Value);
 table_option_term({cache_size, Value}) when is_integer(Value) ->
-    term_assocpair(cache_size, Value).
+    term_assocpair(atom_to_binary(cache_size, utf8), Value).
 
 -spec table_drop(binary(), [] | #term{}) -> build_result().
 table_drop(Name, []) when is_binary(Name) ->
@@ -194,7 +196,7 @@ insert(_, _, _) ->
 %% @private
 -spec insert_option_term(lethink:insert_options()) -> #term_assocpair{}.
 insert_option_term({upsert, Value}) when is_binary(Value) ->
-    term_assocpair(upsert, Value).
+    term_assocpair(atom_to_binary(upsert, utf8), Value).
 
 -spec get(binary() | number(), #term{}) -> build_result().
 get(Key, #term{ type = 'TABLE' } = Table) when is_binary(Key); is_number(Key) ->
@@ -213,11 +215,11 @@ update(Data, #term{ type = Type } = Selection) when
         Type == 'BETWEEN'; Type == 'FILTER' ->
     #term {
         type = 'UPDATE',
-        args = [Selection] ++ [expr(Data)]
+        args = [Selection] ++ [func_wrap(Data)]
     }.
 
--spec row() -> build_result().
-row() ->
+-spec row([]) -> build_result().
+row([]) ->
     #term {
         type = 'IMPLICIT_VAR'
     }.
@@ -333,30 +335,36 @@ not_(Term) ->
 expr(Data, []) ->
     expr(Data).
 
--spec expr(lethink:json()) -> #term{}.
+-spec expr(lethink:json() | fun() | #term{} | #term_assocpair{}) -> #term{} | #term_assocpair{}.
+expr(Item = #term{}) ->
+    Item;
+expr(Item = #term_assocpair{}) ->
+    Item;
 expr({Items}) when is_list(Items) ->
     #term {
         type = 'MAKE_OBJ',
-        optargs = [ expr(Pair) || Pair <- Items ]
+        optargs = [ expr({K, V}) || {K, V} <- Items ]
     };
 expr({Key, Value}) ->
     term_assocpair(Key, Value);
 expr(Items) when is_list(Items) ->
-    #term {
-        type = 'MAKE_ARRAY',
-        args = [ expr(I) || I <- Items ]
-    };
+    case lists:all(fun is_json/1, Items) of
+        true -> make_array(Items);
+        false -> build_query(Items)
+    end;
 expr(Func) when is_function(Func) ->
-    {_, _Arity} = erlang:fun_info(Func, arity),
-    #term {
-           type = 'FUNC',
-           args = []
-    };
+    func(Func);
 expr(Value) ->
     #term {
         type = 'DATUM',
         datum = datum(Value)
     }.
+
+make_array(Items) when is_list(Items) ->
+    #term {
+        type = 'MAKE_ARRAY',
+        args = [ expr(I) || I <- Items ]
+        }.
 
 % @private
 % @doc create Datums from the four basic types.  Arrays and objects
@@ -386,23 +394,63 @@ datum(V) when is_binary(V) ->
         r_str = V
     }.
 
--spec term_assocpair(atom() | binary(), any()) -> #term_assocpair{}.
-term_assocpair(Key, Value) when is_atom(Key) ->
-    term_assocpair(atom_to_binary(Key, latin1), Value);
+-spec var(integer(), []) -> #term{}.
+var(N, []) ->
+    #term {
+        type = 'VAR',
+        args = expr(N)
+        }.
+
+-spec func(fun()) -> #term{}.
+func(Func) ->
+    {_, Arity} = erlang:fun_info(Func, arity),
+    Args = [ {var, N} || N <- lists:seq(1, Arity)],
+    #term {
+        type = 'FUNC',
+        args = [make_array(lists:seq(1, Arity))] ++ [expr(apply(Func, Args))]
+    }.
+
+-spec term_assocpair(binary(), any()) -> #term_assocpair{}.
 term_assocpair(Key, Value) ->
     #term_assocpair {
         key = Key,
         val = expr(Value)
     }.
 
-% Scan for IMPLICIT_VAR or JS
-%-spec ivar_scan(any()) -> boolean().
-%ivar_scan(#term{ type = 'IMPLICIT_VAR' }) ->
-%    true;
-%ivar_scan(#term{} = Term) ->
-%    lists:any(fun ivar_scan/1, Term#term.args) orelse lists:any(fun ivar_scan/1, Term#term.optargs);
-%ivar_scan(_) ->
-%    false.
+func_wrap(Data) ->
+    Value = expr(Data),
+    case ivar_scan(Value) of
+        true -> func(fun(_X) -> Value end);
+        false -> Value
+    end.
 
-%% lethink:query([{table, <<"marvel">>}, {update, {[{<<"age">>, [{row}, {getattr, <<"age">>}, {add, 1}]}]}}])
+% Scan for IMPLICIT_VAR or JS
+-spec ivar_scan(any()) -> boolean().
+ivar_scan(#term{ type = 'IMPLICIT_VAR' }) ->
+    true;
+ivar_scan(#term{ args = Args, optargs = OptArgs }) ->
+    case is_list(Args) of
+        true -> lists:any(fun ivar_scan/1, Args);
+        false -> ivar_scan(Args)
+    end
+    orelse
+    case is_list(OptArgs) of
+        true -> lists:any(fun ivar_scan/1, OptArgs);
+        false -> ivar_scan(Args)
+    end;
+ivar_scan(#term_assocpair{ val = Val }) ->
+    ivar_scan(Val);
+ivar_scan(_) ->
+    false.
+
+-spec is_json(any()) -> boolean().
+is_json(null) -> true;
+is_json(Item) when is_boolean(Item) -> true;
+is_json(Item) when is_number(Item) -> true;
+is_json(Item) when is_binary(Item) -> true;
+is_json({List}) when is_list(List) -> true;
+is_json({Key, _Value}) when is_binary(Key) -> true;
+is_json(_) -> false.
+
+%% lethink:query(test, [{table, <<"marvel">>}, {update, {[{<<"age">>, [{row}, {getattr, <<"age">>}, {add, 1}]}]}}])
 %% r.table('marvel').update(lambda x: {'age': x['age'] + 1}))
