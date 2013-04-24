@@ -14,7 +14,9 @@
 -type success() :: {ok, [any()]}.
 -type error() :: {error, binary(), atom(), any()}.
 
--type json() :: null | boolean() | number() | binary() | {[json()]} | {binary(), json()} | [json()].
+-type document() :: {[keyvalue()]}.
+-type keyvalue() :: {binary(), json_term()}.
+-type json_term() :: null | boolean() | number() | binary() | document() | [json_term()].
 
 -type connect_options() :: {address, inet:ip_address() | inet:hostname()} |
                            {port, inet:port_number()} |
@@ -31,7 +33,10 @@
               error/0,
               connect_options/0,
               table_options/0,
-              insert_options/0]).
+              insert_options/0,
+              document/0,
+              keyvalue/0,
+              json_term/0]).
 
 -spec start() -> ok.
 start() ->

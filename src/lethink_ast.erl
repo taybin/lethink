@@ -174,7 +174,7 @@ table(Name, _, _) when is_list(Name) ->
 table(_, _, _) ->
     {error, <<"Table can either start or follow db operation">>}.
 
--spec insert(lethink:json(), #term{}) -> build_result().
+-spec insert(lethink:document(), #term{}) -> build_result().
 insert(Data, #term{ type = 'TABLE' } = Table) ->
     #term {
         type = 'INSERT',
@@ -183,7 +183,7 @@ insert(Data, #term{ type = 'TABLE' } = Table) ->
 insert(_, _) ->
     {error, <<"insert must follow table operator">>}.
 
--spec insert(lethink:json(), [lethink:insert_options()], #term{}) -> build_result().
+-spec insert(lethink:document(), [lethink:insert_options()], #term{}) -> build_result().
 insert(Data, Options, #term{ type = 'TABLE' } = Table) ->
     #term {
         type = 'INSERT',
@@ -209,7 +209,7 @@ get(Key, _) when is_list(Key) ->
 get(_, _) ->
     {error, <<"get must follow table operator">>}.
 
--spec update(lethink:json(), #term{}) -> build_result().
+-spec update(lethink:document() | fun(), #term{}) -> build_result().
 update(Data, #term{ type = Type } = Selection) when
         Type == 'TABLE'; Type == 'GET';
         Type == 'BETWEEN'; Type == 'FILTER' ->
@@ -282,42 +282,42 @@ or_(Value, Term) when is_boolean(Value) ->
            args = [Term] ++ [expr(Value)]
           }.
 
--spec eq(lethink:json(), #term{}) -> build_result().
+-spec eq(lethink:json_term(), #term{}) -> build_result().
 eq(Value, Term) ->
     #term {
            type = 'EQ',
            args = [Term] ++ [expr(Value)]
           }.
 
--spec ne(lethink:json(), #term{}) -> build_result().
+-spec ne(lethink:json_term(), #term{}) -> build_result().
 ne(Value, Term) ->
     #term {
            type = 'NE',
            args = [Term] ++ [expr(Value)]
           }.
 
--spec gt(lethink:json(), #term{}) -> build_result().
+-spec gt(lethink:json_term(), #term{}) -> build_result().
 gt(Value, Term) ->
     #term {
            type = 'GT',
            args = [Term] ++ [expr(Value)]
           }.
 
--spec ge(lethink:json(), #term{}) -> build_result().
+-spec ge(lethink:json_term(), #term{}) -> build_result().
 ge(Value, Term) ->
     #term {
            type = 'GE',
            args = [Term] ++ [expr(Value)]
           }.
 
--spec lt(lethink:json(), #term{}) -> build_result().
+-spec lt(lethink:json_term(), #term{}) -> build_result().
 lt(Value, Term) ->
     #term {
            type = 'LT',
            args = [Term] ++ [expr(Value)]
           }.
 
--spec le(lethink:json(), #term{}) -> build_result().
+-spec le(lethink:json_term(), #term{}) -> build_result().
 le(Value, Term) ->
     #term {
            type = 'LE',
@@ -331,11 +331,11 @@ not_(Term) ->
            args = [Term]
           }.
 
--spec expr(lethink:json(), []) -> build_result().
+-spec expr(lethink:json_term(), []) -> build_result().
 expr(Data, []) ->
     expr(Data).
 
--spec expr(lethink:json() | fun() | #term{} | #term_assocpair{}) -> #term{} | #term_assocpair{}.
+-spec expr(lethink:keyvalue() | lethink:json_term() | fun() | #term{} | #term_assocpair{}) -> #term{} | #term_assocpair{}.
 expr(Item = #term{}) ->
     Item;
 expr(Item = #term_assocpair{}) ->
