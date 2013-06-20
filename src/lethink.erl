@@ -20,6 +20,7 @@
 
 -type connect_options() :: {address, inet:ip_address() | inet:hostname()} |
                            {port, inet:port_number()} |
+                           {auth_key, binary()} |
                            {database, binary()}.
 
 -type table_options() :: {datacenter, binary()} |

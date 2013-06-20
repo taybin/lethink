@@ -42,10 +42,11 @@ init([Opts]) ->
     Host = proplists:get_value(address, Opts, {127,0,0,1}),
     Port = proplists:get_value(port, Opts, 28015),
     Database = proplists:get_value(database, Opts, <<"test">>),
-    {ok, Sock} = gen_tcp:connect(Host, Port, [binary, {packet, 0}, {active, false}]),
-    ok = gen_tcp:send(Sock, binary:encode_unsigned(?RETHINKDB_VERSION, little)),
+    AuthKey = proplists:get_value(auth_key, Opts, <<>>),
+    {ok, Socket} = gen_tcp:connect(Host, Port, [binary, {packet, 0}, {active, false}]),
+    login(AuthKey, Socket),
     State = #state{
-            socket = Sock,
+            socket = Socket,
             database = Database
     },
     {ok, State}.
@@ -121,3 +122,14 @@ handle_response(#response{ type = 'COMPILE_ERROR', response = [Datum]} = Respons
 handle_response(#response{ type = 'RUNTIME_ERROR', response = [Datum]} = Response) ->
     ErrorMsg = ql2_util:datum_value(Datum),
     {error, ErrorMsg, Response#response.type, Response#response.backtrace}.
+
+-spec login(binary(), port()) -> ok | {error, binary()}.
+login(AuthKey, Socket) ->
+    KeyLength = iolist_size(AuthKey),
+    ok = gen_tcp:send(Socket, binary:encode_unsigned(?RETHINKDB_VERSION, little)),
+    ok = gen_tcp:send(Socket, [<<KeyLength:32/little-unsigned>>, AuthKey]),
+    {ok, Response} = gen_tcp:recv(Socket, 0),
+    case Response == "SUCCESS" of
+        true -> ok;
+        false -> {error, Response}
+    end.
