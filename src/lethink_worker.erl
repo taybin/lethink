@@ -44,7 +44,7 @@ init([Opts]) ->
     Database = proplists:get_value(database, Opts, <<"test">>),
     AuthKey = proplists:get_value(auth_key, Opts, <<>>),
     {ok, Socket} = gen_tcp:connect(Host, Port, [binary, {packet, 0}, {active, false}]),
-    login(AuthKey, Socket),
+    ok = login(AuthKey, Socket),
     State = #state{
             socket = Socket,
             database = Database
@@ -129,7 +129,9 @@ login(AuthKey, Socket) ->
     ok = gen_tcp:send(Socket, binary:encode_unsigned(?RETHINKDB_VERSION, little)),
     ok = gen_tcp:send(Socket, [<<KeyLength:32/little-unsigned>>, AuthKey]),
     {ok, Response} = gen_tcp:recv(Socket, 0),
-    case Response == "SUCCESS" of
+    case Response == <<"SUCCESS",0>> of
         true -> ok;
-        false -> {error, Response}
+        false ->
+            io:fwrite("Error: ~s~n", [Response]),
+            {error, Response}
     end.
