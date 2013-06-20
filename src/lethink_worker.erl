@@ -20,7 +20,7 @@
     token = 1 :: pos_integer()
 }).
 
--define(RETHINKDB_VERSION, 16#3f61ba36). % magic number from ql2.proto
+-define(RETHINKDB_VERSION, 16#723081e1). % magic number from ql2.proto
 
 -spec start_link(any(), [lethink:connect_options()]) -> any().
 start_link(Ref, Opts) ->
