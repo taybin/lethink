@@ -128,10 +128,27 @@ login(AuthKey, Socket) ->
     KeyLength = iolist_size(AuthKey),
     ok = gen_tcp:send(Socket, binary:encode_unsigned(?RETHINKDB_VERSION, little)),
     ok = gen_tcp:send(Socket, [<<KeyLength:32/little-unsigned>>, AuthKey]),
-    {ok, Response} = gen_tcp:recv(Socket, 0),
+    {ok, Response} = read_until_null(Socket),
     case Response == <<"SUCCESS",0>> of
         true -> ok;
         false ->
             io:fwrite("Error: ~s~n", [Response]),
             {error, Response}
     end.
+
+-spec read_until_null(port()) -> {ok, binary()}.
+read_until_null(Socket) ->
+    read_until_null(Socket, []).
+
+-spec read_until_null(port(), list()) -> {ok, binary()}.
+read_until_null(Socket, Acc) ->
+    {ok, Response} = gen_tcp:recv(Socket, 0),
+    Result = [Acc, Response],
+    case is_null_terminated(Response) of
+        true -> {ok, iolist_to_binary(Result)};
+        false -> read_until_null(Socket, Result)
+    end.
+
+-spec is_null_terminated(binary()) -> boolean().
+is_null_terminated(B) ->
+    binary:at(B, iolist_size(B) - 1) == 0.
