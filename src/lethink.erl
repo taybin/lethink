@@ -11,7 +11,7 @@
     ]).
 
 -type response() :: success() | error().
--type success() :: {ok, [any()]}.
+-type success() :: {ok, any()}.
 -type error() :: {error, binary(), atom(), any()}.
 
 -type document() :: {[keyvalue()]}.

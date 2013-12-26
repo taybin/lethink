@@ -49,7 +49,7 @@ build_query(QueryList) ->
 
 %% @private
 %% @doc foldl-inspired poor man's monad
--spec apply_seq([fun()], [] | #term{} | {error, any()}) -> build_result().
+-spec apply_seq([tuple()], [] | #term{} | {error, any()}) -> build_result().
 apply_seq(_, {error, Reason}) ->
     {error, Reason};
 apply_seq([T | Ts], Term) ->

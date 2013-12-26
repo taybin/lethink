@@ -25,7 +25,7 @@ Use
 > lethink:use(my_db_pool, <<"superheroes">>).
 > JsonProplist = [{[{<<"id">>, 5}, {<<"name">>, <<"batman">>}, {<<"rich">>, true}, {<<"cars">>, [1,2,3]}]},
                   {[{<<"id">>, 6}, {<<"name">>, <<"robin">>}, {<<"rich">>, false}, {<<"cars">>, null}]}].
-> lethink:use(my_db_pool, [{table, <<"marvel">>},
+> lethink:query(my_db_pool, [{table, <<"marvel">>},
                            {insert, JsonProplist}].
-> lethink:use(my_db_pool, [{table, <<"marvel">>}, {get, 5}]).
+> lethink:query(my_db_pool, [{table, <<"marvel">>}, {get, 5}]).
 ```
