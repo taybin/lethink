@@ -53,6 +53,6 @@ update(_Config) ->
                 {[{<<"id">>, 2}, {<<"hero">>, <<"superman">>}, {<<"age">>, 50}]}],
     {ok, _} = lethink:query(pool, [{table, <<"marvel">>}, {insert, TestData}]),
     {ok, _} = lethink:query(pool, [{table, <<"marvel">>},
-                                   {update, {[{<<"age">>, [{row}, {getattr, <<"age">>}, {add, 1}]}]}}]),
+                                   {update, {[{<<"age">>, [{row}, {get_field, <<"age">>}, {add, 1}]}]}}]),
     {ok, _} = lethink:query(pool, [{table, <<"marvel">>},
-                                   {update, fun(Row) -> [Row, {getattr, <<"age">>}, {add, 1}] end}]).
+                                   {update, fun(Row) -> [Row, {get_field, <<"age">>}, {add, 1}] end}]).

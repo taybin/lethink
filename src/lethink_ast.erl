@@ -11,7 +11,7 @@
         table_list/1,
         db/2,
         row/1,
-        getattr/2,
+        get_field/2,
         table/2, table/3,
         insert/2, insert/3,
         get/2,
@@ -224,10 +224,10 @@ row([]) ->
         type = 'IMPLICIT_VAR'
     }.
 
--spec getattr(binary(), #term{}) -> build_result().
-getattr(Attr, Term) ->
+-spec get_field(binary(), #term{}) -> build_result().
+get_field(Attr, Term) ->
     #term {
-        type = 'GETATTR',
+        type = 'GET_FIELD',
         args = [Term] ++ [expr(Attr)]
     }.
 
@@ -452,5 +452,5 @@ is_json({List}) when is_list(List) -> true;
 is_json({Key, _Value}) when is_binary(Key) -> true;
 is_json(_) -> false.
 
-%% lethink:query(test, [{table, <<"marvel">>}, {update, {[{<<"age">>, [{row}, {getattr, <<"age">>}, {add, 1}]}]}}])
+%% lethink:query(test, [{table, <<"marvel">>}, {update, {[{<<"age">>, [{row}, {get_field, <<"age">>}, {add, 1}]}]}}])
 %% r.table('marvel').update(lambda x: {'age': x['age'] + 1}))
