@@ -7,6 +7,7 @@
         db_drop/2,
         db_list/1,
         table_create/2, table_create/3,
+        index_create/2, index_create/3,
         table_drop/2,
         table_list/1,
         db/2,
@@ -15,6 +16,9 @@
         table/2, table/3,
         insert/2, insert/3,
         get/2,
+        between/3,
+        between/4,
+        filter/2,
         update/2,
         expr/1, expr/2,
         func/1,
@@ -99,14 +103,40 @@ table_create(Name, Options, #term{ type = 'DB' } = Db) when is_binary(Name) ->
         optargs = [ table_option_term(Opt) || Opt <- Options ]
     }.
 
+-spec index_create(binary(), #term{} | []) -> build_result().
+index_create(Name, Term) ->
+    index_create(Name, [], Term).
+
+-spec index_create(binary(), [lethink:table_options()], #term{} | []) -> build_result().
+index_create(Name, Options, []) ->
+    #term{
+        type = 'INDEX_CREATE',
+        args = expr(Name),
+        optargs = [ index_option_term(Opt) || Opt <- Options ]
+        
+    };
+index_create(Name, Options, #term{ type = 'TABLE' } = Table) when is_binary(Name) ->
+    #term{
+        type = 'INDEX_CREATE',
+        args = [Table, expr(Name)],
+        optargs = [ index_option_term(Opt) || Opt <- Options ]
+    }.
+
 %% @private
 -spec table_option_term(lethink:table_options()) -> #term_assocpair{}.
 table_option_term({datacenter, Value}) when is_binary(Value) ->
     term_assocpair(atom_to_binary(datacenter, utf8), Value);
 table_option_term({primary_key, Value}) when is_binary(Value) ->
     term_assocpair(atom_to_binary(primary_key, utf8), Value);
+table_option_term({index, Value}) when is_binary(Value) ->
+    term_assocpair(atom_to_binary(index, utf8), Value);
 table_option_term({cache_size, Value}) when is_integer(Value) ->
     term_assocpair(atom_to_binary(cache_size, utf8), Value).
+
+-spec index_option_term(lethink:index_options()) -> #term_assocpair{}.
+index_option_term(_Opt) ->
+    %% TODO
+    #term_assocpair{}.
 
 -spec table_drop(binary(), [] | #term{}) -> build_result().
 table_drop(Name, []) when is_binary(Name) ->
@@ -208,6 +238,34 @@ get(Key, _) when is_list(Key) ->
     {error, <<"get key must be binary or number">>};
 get(_, _) ->
     {error, <<"get must follow table operator">>}.
+
+-spec between(binary() | number(), binary() | number(), #term{}) -> build_result().
+between(Value1, Value2, #term{ type = 'TABLE' } = Table) ->
+   #term {
+        type = 'BETWEEN',
+        args = [Table] ++ [expr(Value1)] ++ [expr(Value2)]
+    };
+between(_, _, _) ->
+    {error, "between error format of data"}.
+
+-spec between(binary() | number(), binary() | number(), [lethink:table_options()], #term{}) -> build_result().
+between(Value1, Value2, Options, #term{ type = 'TABLE' } = Table) ->
+   #term {
+        type = 'BETWEEN',
+        args = [Table] ++ [expr(Value1)] ++ [expr(Value2)],
+        optargs = [table_option_term(Opt) || Opt <- Options]
+    };
+between(_, _, _, _) ->
+    {error, "between error format of data"}.
+
+-spec filter(tuple(), #term{}) -> build_result().
+filter(Value, #term{ type = 'TABLE' } = Table) when is_tuple(Value) ->
+    #term {
+        type = 'FILTER',
+        args = [Table] ++ [expr(Value)]
+    };
+filter(_, _) ->
+    {error, "filter error format of data"}.
 
 -spec update(lethink:document() | fun(), #term{}) -> build_result().
 update(Data, #term{ type = Type } = Selection) when

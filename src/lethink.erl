@@ -25,7 +25,8 @@
 
 -type table_options() :: {datacenter, binary()} |
                          {primary_key, binary()} |
-                         {cache_size, pos_integer()}.
+                         {cache_size, pos_integer()}|
+                         {index, binary()}.
 
 -type insert_options() :: {upsert, binary()}.
 
