@@ -196,7 +196,7 @@ table(Name, UseOutdated, []) when is_binary(Name) ->
 table(Name, UseOutdated, #term{ type = 'DB' } = Db) when is_binary(Name) ->
     #term {
         type = 'TABLE',
-        args = [Db] ++ [expr(Name)],
+        args = [Db, expr(Name)],
         optargs = [term_assocpair(<<"use_outdated">>, UseOutdated)]
     };
 table(Name, _, _) when is_list(Name) ->
@@ -208,7 +208,7 @@ table(_, _, _) ->
 insert(Data, #term{ type = 'TABLE' } = Table) ->
     #term {
         type = 'INSERT',
-        args = [Table] ++ [expr(Data)]
+        args = [Table, expr(Data)]
     };
 insert(_, _) ->
     {error, <<"insert must follow table operator">>}.
@@ -217,7 +217,7 @@ insert(_, _) ->
 insert(Data, Options, #term{ type = 'TABLE' } = Table) ->
     #term {
         type = 'INSERT',
-        args = [Table] ++ [expr(Data)],
+        args = [Table, expr(Data)],
         optargs = [ insert_option_term(Opt) || Opt <- Options ]
     };
 insert(_, _, _) ->
@@ -232,7 +232,7 @@ insert_option_term({upsert, Value}) when is_binary(Value) ->
 get(Key, #term{ type = 'TABLE' } = Table) when is_binary(Key); is_number(Key) ->
     #term {
         type = 'GET',
-        args = [Table] ++ [expr(Key)]
+        args = [Table, expr(Key)]
     };
 get(Key, _) when is_list(Key) ->
     {error, <<"get key must be binary or number">>};
@@ -240,32 +240,29 @@ get(_, _) ->
     {error, <<"get must follow table operator">>}.
 
 -spec between(binary() | number(), binary() | number(), #term{}) -> build_result().
-between(Value1, Value2, #term{ type = 'TABLE' } = Table) ->
-   #term {
-        type = 'BETWEEN',
-        args = [Table] ++ [expr(Value1)] ++ [expr(Value2)]
-    };
-between(_, _, _) ->
-    {error, "between error format of data"}.
+between(Value1, Value2, Term) ->
+    between(Value1, Value2, [], Term).
 
 -spec between(binary() | number(), binary() | number(), [lethink:table_options()], #term{}) -> build_result().
 between(Value1, Value2, Options, #term{ type = 'TABLE' } = Table) ->
    #term {
         type = 'BETWEEN',
-        args = [Table] ++ [expr(Value1)] ++ [expr(Value2)],
+        args = [Table, expr(Value1), expr(Value2)],
         optargs = [table_option_term(Opt) || Opt <- Options]
     };
 between(_, _, _, _) ->
-    {error, "between error format of data"}.
+    {error, "between must follow table operator"}.
 
--spec filter(tuple(), #term{}) -> build_result().
-filter(Value, #term{ type = 'TABLE' } = Table) when is_tuple(Value) ->
+-spec filter(lethink:document(), #term{}) -> build_result().
+filter(Value, #term{ type = Type } = Selection) when 
+        Type == 'TABLE'; Type == 'GET';
+        Type == 'BETWEEN' ->
     #term {
         type = 'FILTER',
-        args = [Table] ++ [expr(Value)]
+        args = [Selection, expr(Value)]
     };
 filter(_, _) ->
-    {error, "filter error format of data"}.
+    {error, "filter must follow table, get or between operator"}.
 
 -spec update(lethink:document() | fun(), #term{}) -> build_result().
 update(Data, #term{ type = Type } = Selection) when
@@ -273,7 +270,7 @@ update(Data, #term{ type = Type } = Selection) when
         Type == 'BETWEEN'; Type == 'FILTER' ->
     #term {
         type = 'UPDATE',
-        args = [Selection] ++ [func_wrap(Data)]
+        args = [Selection, func_wrap(Data)]
     }.
 
 -spec row([]) -> build_result().
@@ -286,7 +283,7 @@ row([]) ->
 get_field(Attr, Term) ->
     #term {
         type = 'GET_FIELD',
-        args = [Term] ++ [expr(Attr)]
+        args = [Term, expr(Attr)]
     }.
 
 %% Math and Logic Operations
@@ -295,91 +292,91 @@ get_field(Attr, Term) ->
 add(Value, Term) when is_number(Value); is_binary(Value) ->
     #term {
         type = 'ADD',
-        args = [Term] ++ [expr(Value)]
+        args = [Term, expr(Value)]
     }.
 
 -spec sub(number(), #term{}) -> build_result().
 sub(Value, Term) when is_number(Value) ->
     #term {
            type = 'SUB',
-           args = [Term] ++ [expr(Value)]
+           args = [Term, expr(Value)]
           }.
 
 -spec mul(number(), #term{}) -> build_result().
 mul(Value, Term) when is_number(Value) ->
     #term {
            type = 'MUL',
-           args = [Term] ++ [expr(Value)]
+           args = [Term, expr(Value)]
           }.
 
 -spec div_(number(), #term{}) -> build_result().
 div_(Value, Term) when is_number(Value) ->
     #term {
            type = 'DIV',
-           args = [Term] ++ [expr(Value)]
+           args = [Term, expr(Value)]
           }.
 
 -spec mod(number(), #term{}) -> build_result().
 mod(Value, Term) when is_number(Value) ->
     #term {
            type = 'MOD',
-           args = [Term] ++ [expr(Value)]
+           args = [Term, expr(Value)]
           }.
 
 -spec and_(boolean(), #term{}) -> build_result().
 and_(Value, Term) when is_boolean(Value) ->
     #term {
            type = 'AND',
-           args = [Term] ++ [expr(Value)]
+           args = [Term, expr(Value)]
           }.
 
 -spec or_(boolean(), #term{}) -> build_result().
 or_(Value, Term) when is_boolean(Value) ->
     #term {
            type = 'OR',
-           args = [Term] ++ [expr(Value)]
+           args = [Term, expr(Value)]
           }.
 
 -spec eq(lethink:json_term(), #term{}) -> build_result().
 eq(Value, Term) ->
     #term {
            type = 'EQ',
-           args = [Term] ++ [expr(Value)]
+           args = [Term, expr(Value)]
           }.
 
 -spec ne(lethink:json_term(), #term{}) -> build_result().
 ne(Value, Term) ->
     #term {
            type = 'NE',
-           args = [Term] ++ [expr(Value)]
+           args = [Term, expr(Value)]
           }.
 
 -spec gt(lethink:json_term(), #term{}) -> build_result().
 gt(Value, Term) ->
     #term {
            type = 'GT',
-           args = [Term] ++ [expr(Value)]
+           args = [Term, expr(Value)]
           }.
 
 -spec ge(lethink:json_term(), #term{}) -> build_result().
 ge(Value, Term) ->
     #term {
            type = 'GE',
-           args = [Term] ++ [expr(Value)]
+           args = [Term, expr(Value)]
           }.
 
 -spec lt(lethink:json_term(), #term{}) -> build_result().
 lt(Value, Term) ->
     #term {
            type = 'LT',
-           args = [Term] ++ [expr(Value)]
+           args = [Term, expr(Value)]
           }.
 
 -spec le(lethink:json_term(), #term{}) -> build_result().
 le(Value, Term) ->
     #term {
            type = 'LE',
-           args = [Term] ++ [expr(Value)]
+           args = [Term, expr(Value)]
           }.
 
 -spec not_(#term{}) -> build_result().
@@ -465,7 +462,7 @@ func(Func) ->
     Args = [ {var, N} || N <- lists:seq(1, Arity)],
     #term {
         type = 'FUNC',
-        args = [make_array(lists:seq(1, Arity))] ++ [expr(apply(Func, Args))]
+        args = [make_array(lists:seq(1, Arity)), expr(apply(Func, Args))]
     }.
 
 -spec term_assocpair(binary(), any()) -> #term_assocpair{}.
