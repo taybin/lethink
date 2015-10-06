@@ -39,7 +39,7 @@ query(Pid, Query) ->
 
 -spec init([[{atom, any()}]]) -> {ok, #state{}}.
 init([Opts]) ->
-    Host = proplists:get_value(address, Opts, {127,0,0,1}),
+    Host = proplists:get_value(host, Opts, "127.0.0.1"),
     Port = proplists:get_value(port, Opts, 28015),
     Database = proplists:get_value(database, Opts, <<"test">>),
     AuthKey = proplists:get_value(auth_key, Opts, <<>>),
@@ -47,7 +47,7 @@ init([Opts]) ->
     ok = login(AuthKey, Socket),
     State = #state{
             socket = Socket,
-            database = Database
+            database = unicode:characters_to_binary(Database)
     },
     {ok, State}.
 
@@ -67,7 +67,7 @@ handle_call(_Message, _From, State) ->
 
 -spec handle_cast(any(), #state{}) -> {noreply, #state{}}.
 handle_cast({use, Name}, State) ->
-    {noreply, State#state{database = Name}};
+    {noreply, State#state{database = unicode:characters_to_binary(Name)}};
 
 handle_cast(_Message, State) ->
     {noreply, State}.
